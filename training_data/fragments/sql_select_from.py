@@ -17,7 +17,7 @@ def get_sql_select_from(table_name, field_names_and_types):
     selected_fields = random.sample(list(field_names_and_types), num_columns)
     
     # Format the field list with proper SQL escaping for special characters
-    formatted_fields = [f'"{field}"' for field in selected_fields]
+    formatted_fields = [f'{field}' for field in selected_fields]
     
     # Build the SELECT statement with proper formatting
     # Add newlines and indentation for better readability

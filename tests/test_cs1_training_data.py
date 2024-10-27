@@ -2,7 +2,7 @@ import unittest
 
 from training_data import (get_sql_table_names, get_sql_field_names, get_sql_create_table,
                             get_sql_select_from, get_english_select_from_phrases, get_english_select_from_phrase,
-                            generate_CS1)
+                            generate_cs1, evaluate_cs1_prediction)
 
 class TestFragments(unittest.TestCase):
 
@@ -62,19 +62,19 @@ class TestFragments(unittest.TestCase):
         print( "English select:", english_select_from )
 
 
-    def test_generate_CS1(self):
+    def test_generate_cs1(self):
             
         batch_size = 3
-        answer = generate_CS1(batch_size)
+        answer = generate_cs1(batch_size)
         
         for i in range(batch_size):
-            print( "Table:", answer[i][0] )
-            print( "Fields:", answer[i][1] )
-            print( "Create:", answer[i][2] )
-            print( "English:", answer[i][3] )
-            print( "SQL:", answer[i][4] )
-            print( "" )
+            print( "Table:", answer[i].table_name )
+            print( "Table fields:", answer[i].table_fields )
+            print( "Create:", answer[i].create_statement )
+            print( "Selected fields:", answer[i].selected_fields )
+            print( "English:", answer[i].english_prompt )
+            print( "SQL:", answer[i].sql_statement )
 
- 
-
-
+            accuracy = evaluate_cs1_prediction(answer[i].table_name, answer[i].selected_fields, answer[i].sql_statement)
+            print( "Accuracy:", accuracy )
+            assert(accuracy == 1)

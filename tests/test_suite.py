@@ -1,6 +1,6 @@
 import unittest
 
-from tests.test_fragments import TestFragments
+from tests.test_cs1_training_data import TestFragments
 
 
 if __name__ == '__main__':
