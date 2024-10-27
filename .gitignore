@@ -1,0 +1,4 @@
+training_data/fragments/__pycache__/*
+training_data/__pycache__/*
+tests/__pycache__/*
+.vs/*
