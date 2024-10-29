@@ -1,10 +1,11 @@
 import unittest
 
-from tests.test_cs1_training_data import TestFragments
+from tests.test_cs1 import TestCommandSet1
+from tests.test_cs2 import TestCommandSet2
 
 
 if __name__ == '__main__':
-    test_classes_to_run = [TestFragments]
+    test_classes_to_run = [TestCommandSet1,TestCommandSet2]
 
     loader = unittest.TestLoader()
 

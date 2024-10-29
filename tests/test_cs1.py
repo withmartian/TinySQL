@@ -4,14 +4,16 @@ from training_data import (get_sql_table_names, get_sql_field_names, get_sql_cre
                             get_sql_select_from, get_english_select_from_phrases, get_english_select_from_phrase,
                             generate_cs1, evaluate_cs1_prediction)
 
-class TestFragments(unittest.TestCase):
+
+# Command Set 1 = SELECT, FROM
+# Refer https://docs.google.com/document/d/1HZMqWJA5qw8TFhyk8j3WB573ec-8bKMdrE4TnV4-qgc/
+class TestCommandSet1(unittest.TestCase):
 
 
     def test_table_names(self):
         
         table_names = get_sql_table_names()
         
-        # Print the size of the list and one random entry
         print( "# Table names:", len(table_names), "sample:", table_names[23] )
  
 
@@ -19,7 +21,6 @@ class TestFragments(unittest.TestCase):
         
         field_names_and_types = get_sql_field_names()
         
-        # Print the size of the list   
         print( "# Field names:", len(field_names_and_types) )
 
 
@@ -64,17 +65,16 @@ class TestFragments(unittest.TestCase):
 
     def test_generate_cs1(self):
             
-        batch_size = 3
+        batch_size = 50
         answer = generate_cs1(batch_size)
         
         for i in range(batch_size):
-            print( "Table:", answer[i].table_name )
-            print( "Table fields:", answer[i].table_fields )
-            print( "Create:", answer[i].create_statement )
-            print( "Selected fields:", answer[i].selected_fields )
-            print( "English:", answer[i].english_prompt )
-            print( "SQL:", answer[i].sql_statement )
 
-            accuracy = evaluate_cs1_prediction(answer[i].table_name, answer[i].selected_fields, answer[i].sql_statement)
-            print( "Accuracy:", accuracy )
+            accuracy = evaluate_cs1_prediction(answer[i], answer[i].sql_statement)
+
+            if i == 4:
+                answer[i].print()
+                print( "Accuracy:", accuracy )
+
+            # The "ground truth" should score 100%
             assert(accuracy == 1)

@@ -8,6 +8,7 @@ def get_english_select_from_phrases():
 
     """
     return [
+        # Ensure model sees correct answer tokens during training
         "SELECT [fields] FROM [table]",
 
         # Direct commands
@@ -96,7 +97,7 @@ def get_english_select_from_phrase(table_name: str, field_names: list[str]) -> s
         field_names (list[str]): List of field names to select
         
     Returns:
-        tuple: (english_phrase, sql_statement)
+        str: english_phrase
     """
     # Get list of template phrases
     templates = get_english_select_from_phrases()
