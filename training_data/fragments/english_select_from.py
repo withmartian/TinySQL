@@ -1,6 +1,8 @@
 import random
+from functools import lru_cache
 
 
+@lru_cache(maxsize=1)
 def get_english_select_from_phrases():
     """
     Returns a list of templated English phrases commonly used to request SQL SELECT operations.
@@ -88,27 +90,10 @@ def get_english_select_from_phrases():
     ]
 
 
-def get_english_select_from_phrase(table_name: str, field_names: list[str]) -> str:
-    """
-    Generates both an English phrase and corresponding SQL statement for a SELECT query.
-    
-    Args:
-        table_name (str): Name of the table to query
-        field_names (list[str]): List of field names to select
-        
-    Returns:
-        str: english_phrase
-    """
-    # Get list of template phrases
-    templates = get_english_select_from_phrases()
-    
-    # Select random template
-    template = random.choice(templates)
-    
-    # Format fields for both English 
-    english_fields = ", ".join(field_names[:-1]) + " and " + field_names[-1] if len(field_names) > 1 else field_names[0]
-    
-    # Create English phrase
-    english = template.replace("[fields]", english_fields).replace("[table]", table_name)
-    
-    return english
+def get_english_select_from_phrase() -> str:
+
+    phrases = get_english_select_from_phrases()    
+
+    phrase = random.choice(phrases)
+
+    return phrase

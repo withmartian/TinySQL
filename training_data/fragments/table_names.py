@@ -1,12 +1,20 @@
-# return a list of ~500 unique SQL table names
-def get_sql_table_names():
-
-    # Claude / Chat GPT prompt: Create a python function to return a list of ~500 unique SQL table names you have seen in SQL commands during your training 
-    table_names = get_common_sql_table_names_claude() + get_sql_table_names_chatgpt()
-
-    return list(set(table_names))
+import random
+from typing import List
+from functools import lru_cache
 
 
+@lru_cache(maxsize=1)
+def get_sql_table_names() -> List[str]:
+    """
+    Returns a cached list of unique SQL table names.
+    Only computes the combination and deduplication once.
+    """
+    combined_names = get_common_sql_table_names_claude() + get_sql_table_names_chatgpt()
+    # Use dict.fromkeys instead of set for stable ordering
+    return list(dict.fromkeys(combined_names))
+
+
+@lru_cache(maxsize=1)
 def get_common_sql_table_names_claude():
     """Returns a list of common SQL table names encountered in database schemas."""
     
@@ -287,6 +295,7 @@ def get_common_sql_table_names_claude():
     ]
 
 
+@lru_cache(maxsize=1)
 def get_sql_table_names_chatgpt():
     table_names = [
         "users",
@@ -743,3 +752,16 @@ def get_sql_table_names_chatgpt():
     ]
     return table_names
 
+
+def get_sql_table_name() -> str:
+    """
+    Returns N random unique table names.
+    
+    Args:
+        N (int): Number of table names to return
+        
+    Returns:
+        List[str]: List of N random unique table names
+    """
+    all_tables = get_sql_table_names()
+    return random.choice(all_tables)

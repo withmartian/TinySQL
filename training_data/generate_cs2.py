@@ -1,31 +1,38 @@
-from training_data import (get_sql_table_names, get_sql_field_names, get_sql_create_table, get_sql_select_from,
-                            get_english_select_from_phrase, get_english_order_by_phrase, get_sql_order_by)
-from .batch_item import BatchItem
-from .generate_cs1 import evaluate_cs1_prediction_score
+from .sql_create_table import get_sql_create_table
+from .sql_select_from import get_sql_select_from
+from .sql_order_by import get_sql_order_by
+from .fragments.models import BatchItem
+from .generate_cs1 import evaluate_cs1_prediction_score, get_english_select_from, get_english_order_by
 
 
 # Generate a batch of "command set 2" prompts and answers: SELECT xx FROM yy ORDER BY zz DESC
-def generate_cs2(batch_size):
-    table_names = get_sql_table_names()
-    field_names_and_types = get_sql_field_names()       
+def generate_cs2(batch_size, order_by_clause_probability=0.9, use_aggregates=False):
+  
 
     batch = []
     for i in range(batch_size):
-        (table_name, table_fields, create_table_statement) = get_sql_create_table(table_names, field_names_and_types, 2, 12)
+        (table_name, table_fields, create_table_statement) = get_sql_create_table(2, 12)
 
-        (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields)
-        (order_by_fields, asc, sql_order_by_statement) = get_sql_order_by(table_fields)
+        (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, use_aggregates)
+        english_select_from_prompt = get_english_select_from(table_name, selected_fields)
 
-        english_select_from_prompt = get_english_select_from_phrase(table_name, selected_fields)
-        english_order_by_prompt = get_english_order_by_phrase(selected_fields, asc)
+        # Randomly decide whether to include an ORDER BY clause
+        include_order_by = i < batch_size * order_by_clause_probability
+        if include_order_by:
+            (order_by_fields, sql_order_by_statement) = get_sql_order_by(table_fields)
+            english_order_by_prompt = get_english_order_by(order_by_fields)
+        else:
+            order_by_fields = []
+            english_order_by_prompt = ""
+            sql_order_by_statement = ""
 
         batch_item = BatchItem(
             command_set=2,
             table_name=table_name,
             table_fields=table_fields,
             create_statement=create_table_statement,
-            selected_fields=selected_fields,
-            order_by_fields=order_by_fields,
+            select=selected_fields,
+            order_by=order_by_fields,
             english_prompt=english_select_from_prompt + " " + english_order_by_prompt,
             sql_statement=sql_select_statement + " " + sql_order_by_statement, # ground truth
         )
@@ -37,13 +44,17 @@ def generate_cs2(batch_size):
 # Returns accuracy of a "command set 2" predicted answer compared to the ground truth
 def evaluate_cs2_prediction_score(item: BatchItem, predicted_sql_statement: str):
 
+    # Handle the no ORDER BY clause case
+    if predicted_sql_statement == "":
+        return (0,0)
+
     # We want to reward components of the answer that are correct.
     # - Starts with ORDER BY                1 point
     # - Contains field names                N points
-    # - There are no unrecognished words    1 point
+    # - There are no unrecognised words     1 point
 
     # Calculate the total number of points on offer
-    N = len(item.order_by_fields)
+    N = len(item.order_by)
     total_points = 2 + N
 
     points_earned = 0
@@ -57,12 +68,12 @@ def evaluate_cs2_prediction_score(item: BatchItem, predicted_sql_statement: str)
         points_earned += 1
 
     # Criterion 2: Contains field names (N points)
-    for field in item.order_by_fields:
-        if field.upper() in tokens_upper:
+    for field in item.order_by:
+        if field.name.upper() in tokens_upper:
             points_earned += 1
 
     # Criterion 3: There are no unrecognized words (1 point)
-    recognized_words = ['ORDER', 'BY', 'ASC', 'DESC'] + [field.upper() for field in item.order_by_fields]
+    recognized_words = ['ORDER', 'BY', 'ASC', 'DESC'] + [field.name.upper() for field in item.order_by]
     unrecognized_words = [token for token in tokens_upper if token not in recognized_words]
     if len(unrecognized_words) == 0:
         points_earned += 1

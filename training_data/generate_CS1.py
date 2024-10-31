@@ -1,27 +1,81 @@
-from training_data import get_sql_table_names, get_sql_field_names, get_sql_create_table, get_sql_select_from, get_english_select_from_phrase
-from .batch_item import BatchItem
+import random
+from .fragments.english_aggregates import get_english_sum_phrases, get_english_avg_phrases, get_english_min_phrases, get_english_max_phrases, get_english_count_phrases
+from .fragments.english_select_from import get_english_select_from_phrase
+from .fragments.english_order_by import get_english_order_by_phrase
+from .sql_create_table import get_sql_create_table
+from .sql_select_from import get_sql_select_from
+from .fragments.models import BatchItem, OrderField, SelectField
+
+
+def get_english_order_by(fields: list[OrderField]) -> str:
+    answer = ""
+
+    for i, field in enumerate(fields):
+        english = get_english_order_by_phrase(field.asc)
+        if i > 0:
+            answer += ","
+        answer += " " + english + " " + field.name
+    
+    return answer
+
+
+def get_english_select_from(table_name: str, fields: list[SelectField]) -> str:
+    template = get_english_select_from_phrase()    
+    
+    english_fields = ""
+    for i, field in enumerate(fields):
+
+        phrases = None
+        if field.aggregate is None:
+            # No aggregates  
+            pass
+        elif field.aggregate == "SUM":
+            phrases = get_english_sum_phrases()
+        elif field.aggregate == "AVG":
+            phrases = get_english_avg_phrases()
+        elif field.aggregate == "MIN":
+            phrases = get_english_min_phrases()
+        elif field.aggregate == "MAX":
+            phrases = get_english_max_phrases()
+        elif field.aggregate == "COUNT":
+            phrases = get_english_count_phrases()
+
+        if phrases is None:
+            english_field = field.name
+        else:
+            english_field = f"{random.choice(phrases)} {field.name}"
+
+        english_fields += english_field
+        
+        if i == len(fields) - 2:
+            english_fields += " and "   
+        elif i < len(fields) - 2:
+            english_fields += ", "   
+       
+    # Create English phrase
+    english = template.replace("[fields]", english_fields).replace("[table]", table_name)
+    
+    return english
 
 
 # Generate a batch of "command set 1" prompts and answers. These are SQL SELECT statements with a single table and a few fields.
-def generate_cs1(batch_size):
-    table_names = get_sql_table_names()
-    field_names_and_types = get_sql_field_names()       
+def generate_cs1(batch_size, min_cols=2, max_cols=12):
 
     batch = []
     for i in range(batch_size):
-        (table_name, table_fields, create_table_statement) = get_sql_create_table(table_names, field_names_and_types, 2, 12)
+        (table_name, table_fields, create_table_statement) = get_sql_create_table(min_cols, max_cols)
 
-        (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields)
+        (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, False)
 
-        english_select_from_prompt = get_english_select_from_phrase(table_name, selected_fields)
+        english_select_from_prompt = get_english_select_from(table_name, selected_fields)
 
         batch_item = BatchItem(
             command_set=1, 
             table_name=table_name,
             table_fields=table_fields,
             create_statement=create_table_statement,
-            selected_fields=selected_fields,
-            order_by_fields=None,
+            select=selected_fields,
+            order_by=None,
             english_prompt=english_select_from_prompt,
             sql_statement=sql_select_statement, # ground truth
         )
@@ -43,12 +97,11 @@ def evaluate_cs1_prediction_score(item: BatchItem, predicted_sql_statement: str)
     # - All field names are after SELECT    N points
     # - Word FROM is after all field names  1 point
     # - Word table_name is after FROM       1 point   
-    # - There are no unrecognished words    1 point
 
 
     # Calculate the total number of points on offer
-    N = len(item.selected_fields)
-    total_points = 7 + 2 * N  
+    N = len(item.select)
+    total_points = 6 + 2 * N  
 
 
     points_earned = 0
@@ -70,8 +123,8 @@ def evaluate_cs1_prediction_score(item: BatchItem, predicted_sql_statement: str)
         points_earned += 1
 
     # Criterion 4: Contains field names (N points)
-    for field in item.selected_fields:
-        if field.upper() in tokens_upper:
+    for field in item.select:
+        if field.name.upper() in tokens_upper:
             points_earned += 1
 
     # Criterion 5: First word is SELECT (1 point)
@@ -81,8 +134,8 @@ def evaluate_cs1_prediction_score(item: BatchItem, predicted_sql_statement: str)
     # Criterion 6: All field names are after SELECT (N points)
     if 'SELECT' in tokens_upper:
         select_index = tokens_upper.index('SELECT')
-        for field in item.selected_fields:
-            field_indices = [i for i, token in enumerate(tokens_upper) if token == field.upper()]
+        for field in item.select:
+            field_indices = [i for i, token in enumerate(tokens_upper) if token == field.name.upper()]
             if all(i > select_index for i in field_indices):
                 points_earned += 1
 
@@ -90,7 +143,7 @@ def evaluate_cs1_prediction_score(item: BatchItem, predicted_sql_statement: str)
     if 'FROM' in tokens_upper:
         from_index = tokens_upper.index('FROM')
         last_field_index = max(
-            [i for i, token in enumerate(tokens_upper) if token in [f.upper() for f in item.selected_fields]],
+            [i for i, token in enumerate(tokens_upper) if token in [f.name.upper() for f in item.select]],
             default=-1
         )
         if from_index > last_field_index:
@@ -103,17 +156,21 @@ def evaluate_cs1_prediction_score(item: BatchItem, predicted_sql_statement: str)
         if table_name_index > from_index:
             points_earned += 1
 
-    # Criterion 9: There are no unrecognized words (1 point)
-    recognized_words = ['SELECT', 'FROM'] + [item.table_name.upper()] + [field.upper() for field in item.selected_fields]
-    unrecognized_words = [token for token in tokens_upper if token not in recognized_words]
-    if len(unrecognized_words) == 0:
-        points_earned += 1
-
     return (points_earned, total_points)
 
 
 def evaluate_cs1_prediction(item: BatchItem, predicted_sql_statement: str) -> float:
     (points_earned, total_points) = evaluate_cs1_prediction_score(item, predicted_sql_statement)
+
+    tokens = predicted_sql_statement.strip().split()
+    tokens_upper = [token.upper().strip(',') for token in tokens]    
+
+    recognized_words = ['SELECT', 'FROM', item.table_name.upper()] + [field.name.upper() for field in item.select]
+
+    unrecognized_words = [token for token in tokens_upper if token not in recognized_words]
+    if len(unrecognized_words) == 0:
+        points_earned += 1
+    total_points += 1
 
     accuracy = 1.0 * points_earned / total_points
 

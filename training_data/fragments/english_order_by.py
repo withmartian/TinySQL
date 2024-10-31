@@ -1,6 +1,8 @@
 import random
+from functools import lru_cache
 
 
+@lru_cache(maxsize=1)
 def get_english_order_by_phrases():
     """
     Returns a list of tuples containing:
@@ -102,30 +104,12 @@ def get_english_order_by_phrases():
     ]
 
 
-def get_english_order_by_phrase(field_names: list[str], asc : bool) -> str:
-    """
-    Generates both an English phrase and corresponding SQL statement for a SELECT query.
+def get_english_order_by_phrase(asc : bool) -> str:
+
+    phrases = get_english_order_by_phrases()
     
-    Args:
-        field_names (list[str]): List of field names to select
-        asc bool: Ascending or descending order
-        
-    Returns:
-        str: english_phrase
-    """
-    # Get list of template phrases
-    templates = get_english_order_by_phrases()
+    filtered_phrases = [phrase for phrase, direction in phrases if (direction == "ASC") == asc]
     
-    # Filter templates to match the asc/desc preference
-    filtered_templates = [phrase for phrase, direction in templates if (direction == "ASC") == asc]
+    template = random.choice(filtered_phrases)
     
-    # Select random template
-    template = random.choice(filtered_templates)
-    
-    # Format fields for English 
-    english_fields = ", ".join(field_names[:-1]) + " and " + field_names[-1] if len(field_names) > 1 else field_names[0]
-    
-    # Create English phrase
-    english = template + " " + english_fields
-    
-    return english
+    return template
