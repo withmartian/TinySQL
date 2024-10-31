@@ -7,6 +7,9 @@ def get_english_max_phrases():
     Returns a list of tuples containing common English phrases indicating max(field) intent
     These map natural language to SQL's MAX command
     """
+
+    # TODO: Associate each phrase with valid data types. Use that association to improve SQL command validity.  
+
     return [
         # Ensure model sees correct answer tokens during training
         "max",

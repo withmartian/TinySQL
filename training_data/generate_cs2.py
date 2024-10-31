@@ -53,28 +53,28 @@ def evaluate_cs2_prediction_score(item: BatchItem, predicted_sql_statement: str)
     # - Contains field names                N points
     # - There are no unrecognised words     1 point
 
-    # Calculate the total number of points on offer
-    N = len(item.order_by)
-    total_points = 2 + N
-
+    total_points = 0
     points_earned = 0
 
     # Tokenize the predicted SQL statement
     tokens = predicted_sql_statement.strip().split()
     tokens_upper = [token.upper().strip(',') for token in tokens]
 
-    # Criterion 1: Starts with ORDER BY
+    # Criterion: Starts with ORDER BY
+    total_points += 1
     if (tokens_upper[0] == 'ORDER' and tokens_upper[1] == 'BY'):
         points_earned += 1
 
-    # Criterion 2: Contains field names (N points)
+    # Criterion: Contains field names
     for field in item.order_by:
+        total_points += 1
         if field.name.upper() in tokens_upper:
             points_earned += 1
 
-    # Criterion 3: There are no unrecognized words (1 point)
+    # Criterion: There are no unrecognized words 
     recognized_words = ['ORDER', 'BY', 'ASC', 'DESC'] + [field.name.upper() for field in item.order_by]
     unrecognized_words = [token for token in tokens_upper if token not in recognized_words]
+    total_points += 1
     if len(unrecognized_words) == 0:
         points_earned += 1
 

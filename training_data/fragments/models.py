@@ -13,11 +13,23 @@ class SelectField:
     name: str
     aggregate: str # SUM, AVG, MIN, MAX, COUNT, ""
 
+    @property
+    def aggregate_of_field(self):
+        if self.aggregate == "":
+            return self.name
+        return f"{self.aggregate}({self.name})"
+    
+    @property
+    def aggregated_name(self):
+        if self.aggregate == "":
+            return self.name
+        return f"{self.aggregate}_{self.name}"
+    
+    @property
     def sql(self):
         if self.aggregate == "":
             return self.name
-        return f"{self.aggregate}({self.name}) AS {self.aggregate}_{self.name}"
-
+        return f"{self.aggregate_of_field} AS {self.aggregated_name}"
 
 @dataclass
 class OrderField:

@@ -3,7 +3,7 @@ import unittest
 from training_data import (generate_cs3, evaluate_cs3_prediction)
 
 
-# Command Set 2 = ORDER BY ASC, DESC
+# Command Set 3 = MAX, MIN, AVG, SUM, COUNT
 # Refer https://docs.google.com/document/d/1HZMqWJA5qw8TFhyk8j3WB573ec-8bKMdrE4TnV4-qgc/
 class TestCommandSet3(unittest.TestCase):
 

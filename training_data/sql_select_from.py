@@ -22,7 +22,7 @@ def get_sql_select_from(table_name, table_fields, use_aggregates: bool):
      
     formatted_fields = []  
     for field in selected_fields:
-        formatted_fields.append(field.sql())
+        formatted_fields.append(field.sql)
 
     if len(formatted_fields) == 1:
         sql = f"SELECT {formatted_fields[0]} FROM {table_name}"
