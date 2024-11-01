@@ -1,5 +1,6 @@
 import unittest
-
+import sys
+sys.path.append('/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql')
 from tests.test_cs1_training_data import TestFragments
 
 
