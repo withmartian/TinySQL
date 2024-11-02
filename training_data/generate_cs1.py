@@ -11,9 +11,6 @@ from typing import List
 import pandas as pd
 from datasets import Dataset, DatasetDict
 
-import sys
-sys.path.append('/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql')
-
 
 def get_english_order_by(fields: list[OrderField]) -> str:
     answer = ""
@@ -207,52 +204,3 @@ def evaluate_cs1_prediction(item: BatchItem, predicted_sql_statement: str) -> fl
     accuracy = 1.0 * (points_earned_part) / (total_points_part)
 
     return accuracy
-
-# main function
-if __name__ == '__main__':
-    # 20s to generate 100k samples
-    batch_size = 100000
-    debug = False
-    dataset = generate_cs1(batch_size)
-
-    # Create a dataframe
-    df = pd.DataFrame(dataset, columns=['english_prompt', 'create_statement', 'sql_statement', 'selected_fields', 'table_fields', 'table_name'])
-
-    # Convert to HF dataset
-    hf_dataset = Dataset.from_pandas(df)
-
-    # Split dataset into train + val (90%) and test (10%)
-    train_val_split = hf_dataset.train_test_split(test_size=0.1, seed=420)
-    test_dataset = train_val_split['test']
-    
-    # Further split train_val into train (85%) and val (15% of the remaining data)
-    train_val_split = train_val_split['train'].train_test_split(test_size=0.15, seed=420)  # 0.25 * 0.8 = 0.2
-
-    # Organize splits
-    train_dataset = train_val_split['train']
-    val_dataset = train_val_split['test']
-
-    # Combine splits into a single DatasetDict
-    hf_dataset = DatasetDict({
-        'train': train_dataset,
-        'validation': val_dataset,
-        'test': test_dataset
-    })
-
-    # Push to HF
-    hf_dataset.push_to_hub("dhruvnathawani/cs1_dataset")
-
-    # Unit tests for the dataset (on the train set as an example)
-    accuracy = 0
-    for i in range(len(train_dataset)):
-        score = evaluate_cs1_prediction(dataset[i].table_name, dataset[i].selected_fields, dataset[i].sql_statement)
-        if debug or score < 1:
-            print("Table:", dataset[i].table_name)
-            print("Table fields:", dataset[i].table_fields)
-            print("Create:", dataset[i].create_statement)
-            print("Selected fields:", dataset[i].selected_fields)
-            print("English:", dataset[i].english_prompt)
-            print("SQL:", dataset[i].sql_statement)
-        #assert(score == 1)
-        accuracy += score
-    print("Dataset Accuracy:", (accuracy / len(train_dataset)) * 100)
