@@ -9,8 +9,8 @@ fi
 
 project_name="sql_interp"
 dataset_name="dhruvnathawani/cs1_dataset"
-num_train_epochs=3
-batch_size=32
+num_train_epochs=1
+batch_size=128
 gradient_accumulation_steps=8
 HF_TOKEN="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"
 warmup_steps=20
@@ -19,15 +19,17 @@ sanitized_project_name=$(echo "$project_name" | tr '/\\:#?%,' '_')
 # Average token count per sample: 78.19177777777777
 # Minimum token count per sample: 24
 # Maximum token count per sample: 178
-max_seq_length=256
+max_seq_length=512
 
 # Define model and simplified model name for the experiment
 model_names=(
     "meta-llama/Llama-3.2-1B-Instruct"
-    "roneneldan/TinyStories-Instruct-2Layers-33M"
-    "Qwen/Qwen2-0.5B-Instruct-GGUF"
-    "meta-llama/Llama-3.2-1B"
+    #"roneneldan/TinyStories-Instruct-2Layers-33M"
+    "Qwen/Qwen2-0.5B-Instruct"
 )
+
+# "meta-llama/Llama-3.2-1B-Instruct" - 64
+# "qwen2/Qwen2-0.5B-Instruct" - 32
 
 # Define the list of learning rates
 learning_rates=(2e-05)
@@ -69,10 +71,10 @@ for model_name in "${model_names[@]}"; do
         
         # Run the Python script with the appropriate arguments
         # accelerate launch finetune.py --sft --hf_token YOUR_HF_TOKEN
-        # python3 finetune.py \
-        accelerate launch \
-                --num_processes 4 \
-        finetune.py \
+        #accelerate launch \
+        #        --num_processes 4 \
+        #inetune.py \
+        python3 finetune.py \
                 --sft \
                 --model_name "$model_name" \
                 --learning_rate "$lr" \
