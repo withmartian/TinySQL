@@ -1,14 +1,78 @@
-# return a list of ~500 unique SQL field names and associated data types 
-def get_sql_field_names():
+import random
+from typing import Dict, List, Tuple
+from functools import lru_cache
+from .models import TableField, SelectField
 
-    # Claude / Chat GPT prompt: Create a python function to return a list of ~250 unique SQL column names
-    # you have seen in SQL commands during your training. For each column name, include a list of the most 
-    # common data types seen
-    field_names = combine_column_types(
+
+@lru_cache(maxsize=1)
+def get_sql_field_names_and_types() -> Dict[str, List[str]]:
+    """Cache the combined dictionary since it's static and expensive to compute."""
+    return combine_column_types(
         get_common_sql_columns_with_types_claude(),
-        get_sql_column_names_and_types_chatgpt() )
+        get_sql_column_names_and_types_chatgpt()
+    )
 
-    return field_names
+
+@lru_cache(maxsize=1)
+def get_field_names_and_types_list() -> List[Tuple[str, List[str]]]:
+    """Cache the conversion of dictionary to list for sampling."""
+    return list(get_sql_field_names_and_types().items())
+
+
+def get_sql_table_fields(N: int) -> List[TableField]:
+    """Return N random SQL field names with an associated data type."""
+    # Get the cached list of field names and their possible types
+    field_names = get_field_names_and_types_list()
+    
+    # Sample N items from the list
+    selected_fields = random.sample(field_names, N)
+    
+    # For each selected field, choose one random type from its possible types
+    return [TableField(name=name, type=random.choice(types)) for name, types in selected_fields]
+
+
+def get_sql_select_fields( table_fields: List[TableField], N: int, use_aggregates: bool) -> List[SelectField]:
+    """Return N random SQL field names with an associated aggregate."""
+    
+    # Define which aggregates can be used with which data types
+    aggregate_by_type = {
+        "INTEGER": ["SUM", "AVG", "MIN", "MAX", "COUNT", ""],
+        "BIGINT": ["SUM", "AVG", "MIN", "MAX", "COUNT", ""],
+        "DECIMAL": ["SUM", "AVG", "MIN", "MAX", "COUNT", ""],
+        "NUMERIC": ["SUM", "AVG", "MIN", "MAX", "COUNT", ""],
+        "FLOAT": ["SUM", "AVG", "MIN", "MAX", "COUNT", ""],
+        "DOUBLE": ["SUM", "AVG", "MIN", "MAX", "COUNT", ""],
+        "VARCHAR": ["MIN", "MAX", "COUNT", ""],
+        "CHAR": ["MIN", "MAX", "COUNT", ""],
+        "TEXT": ["MIN", "MAX", "COUNT", ""],
+        "DATE": ["MIN", "MAX", "COUNT", ""],
+        "DATETIME": ["MIN", "MAX", "COUNT", ""],
+        "TIMESTAMP": ["MIN", "MAX", "COUNT", ""],
+        "BOOLEAN": ["COUNT", ""],
+        "UUID": ["COUNT", ""],
+        "BLOB": ["COUNT", ""],
+        "JSON": ["COUNT", ""],
+        "JSONB": ["COUNT", ""]
+    }
+    
+    # Default to all types if type not found
+    default_aggregates = ["COUNT", ""]
+    
+    selected_fields = []   
+    for a_table_field in random.sample(table_fields, N):
+
+        field_name = a_table_field.name
+        field_type = a_table_field.type.upper()
+        
+        if use_aggregates:
+            # Get valid aggregates for this field type
+            valid_aggregates = aggregate_by_type.get(field_type, default_aggregates)
+            agg = random.choice(valid_aggregates)
+            selected_fields += [SelectField(name=field_name, aggregate=agg)]
+        else:
+            selected_fields += [SelectField(name=field_name, aggregate="")]
+
+    return selected_fields
 
 
 def combine_column_types(dict1, dict2):
