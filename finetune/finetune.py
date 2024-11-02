@@ -14,7 +14,6 @@ from generate_CS1 import evaluate_cs1_prediction
 import wandb
 from trl import SFTTrainer
 from datasets import load_dataset
-from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from transformers import TrainerCallback
 from transformers import DataCollatorForLanguageModeling
@@ -26,8 +25,8 @@ def parse_args():
     # Add arguments
     parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.2-1B-Instruct", help="Model name or path")
     parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate for fine-tuning")
-    parser.add_argument("--num_train_epochs", type=float, default=0, help="Number of epochs")
-    parser.add_argument("--batch_size", type=int, default=8, help="Batch size per device")
+    parser.add_argument("--num_train_epochs", type=float, default=1, help="Number of epochs")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size per device")
     parser.add_argument("--gradient_accumulation_steps", type=int, default=8, help="Gradient accumulation steps")
     parser.add_argument("--dataset_name", type=str, default="dhruvnathawani/cs1_dataset", help="Dataset name or path")
     parser.add_argument("--output_dir", type=str, default="models/debug", help="Directory to save the model")
@@ -39,48 +38,54 @@ def parse_args():
     parser.add_argument("--warmup_steps", type=int, default=10, help="Warmup steps for fine-tuning")
     parser.add_argument("--max_seq_length", type=int, default=512, help="Maximum sequence length")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
-    
+
     # Add flags for fine-tuning and evaluation
     parser.add_argument("--sft", action="store_true", help="Fine-tune the model with SFT")
     parser.add_argument("--evaluate", action="store_true", help="Evaluate the model")
-    
+
     return parser.parse_args()
 
 class EvaluationCallback(TrainerCallback):
-    def __init__(self, evaluate_fn):
+    def __init__(self, evaluate_fn, trainer, dataset, model, tokenizer, max_seq_length, dataset_type):
         super().__init__()
         self.evaluate_fn = evaluate_fn
+        self.trainer = trainer
+        self.dataset = dataset
+        self.model = model
+        self.tokenizer = tokenizer
+        self.max_seq_length = max_seq_length
+        self.dataset_type = dataset_type
 
     def on_evaluate(self, args, state, control, **kwargs):
-        trainer = kwargs['trainer']
-        eval_score = self.evaluate_fn(trainer)
-        print(f"Evaluation score: {eval_score}")
+        # Call the evaluate function with all required arguments
+        gt_score, prediction_score = self.evaluate_fn(
+            args, 
+            self.dataset, 
+            self.model, 
+            self.tokenizer, 
+            self.max_seq_length, 
+            self.dataset_type
+        )
 
-def evaluate(args, dataset, model, tokenizer, max_seq_length, accelerator, data_collator, batch_size=1024):
+def evaluate(args, dataset, model, tokenizer, max_seq_length, dataset_type="validation", batch_size=1024):
     model.eval()
     total_prediction_score = 0
     total_gt_score = 0
     num_samples = 0
 
-    # Prepare the model with accelerator
-    model = accelerator.prepare(model)
-
     # Set tokenizer padding side and special tokens
     tokenizer.padding_side = 'left'
-    tokenizer.pad_token = tokenizer.eos_token  # Set pad token to eos token if pad token is undefined
+    tokenizer.pad_token = tokenizer.eos_token
 
-    # Verify and set special token IDs
     if tokenizer.eos_token_id is None:
         tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids('<|endoftext|>')
 
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids('<|pad|>')
 
-    # Tokenize the dataset and include necessary fields
     def tokenize_fn(example):
         prompt_text = f"### Instruction:\n{example['english_prompt']}\n### Context:\n{example['create_statement']}\n### Response:\n"
         tokenized = tokenizer(prompt_text, padding="max_length", truncation=True, max_length=max_seq_length)
-        # Include necessary fields in the tokenized dataset
         tokenized['table_name'] = example['table_name']
         tokenized['selected_fields'] = example['selected_fields']
         tokenized['sql_statement'] = example['sql_statement']
@@ -88,20 +93,9 @@ def evaluate(args, dataset, model, tokenizer, max_seq_length, accelerator, data_
         tokenized['create_statement'] = example['create_statement']
         return tokenized
 
-    # Do not remove columns to keep necessary fields
     tokenized_dataset = dataset.map(tokenize_fn)
-
-    if args.debug:
-        decoded_string = tokenizer.decode(
-            [id for id, mask in zip(tokenized_dataset['input_ids'][0], tokenized_dataset['attention_mask'][0]) if mask == 1],
-            skip_special_tokens=True
-        )
-        print("Decoded string:", decoded_string)
-
-    # Set format to "torch" for tensor columns and include all columns
     tokenized_dataset.set_format(type="torch", columns=["input_ids", "attention_mask"], output_all_columns=True)
 
-    # Define a custom collate function
     def custom_collate_fn(batch):
         batch_input_ids = torch.stack([example['input_ids'] for example in batch])
         batch_attention_mask = torch.stack([example['attention_mask'] for example in batch])
@@ -120,16 +114,14 @@ def evaluate(args, dataset, model, tokenizer, max_seq_length, accelerator, data_
             'create_statement': batch_create_statement,
         }
 
-    # Create a DataLoader and prepare it with the accelerator
     test_dataloader = DataLoader(tokenized_dataset, batch_size=batch_size, shuffle=False, collate_fn=custom_collate_fn)
-    test_dataloader = accelerator.prepare(test_dataloader)
 
-    # Loop over the DataLoader batches
     for batch in tqdm(test_dataloader, desc="Evaluating"):
-        # Move inputs to the appropriate device
-        inputs = {key: val.to(accelerator.device) for key, val in batch.items() if key in ["input_ids", "attention_mask"]}
+        inputs = {key: val for key, val in batch.items() if key in ["input_ids", "attention_mask"]}
+        # Move inputs to the correct device
+        inputs["input_ids"] = inputs["input_ids"]#.to(device)
+        inputs["attention_mask"] = inputs["attention_mask"]#.to(device)
 
-        # Generate model output with no_grad for evaluation
         with torch.no_grad():
             outputs = model.generate(
                 input_ids=inputs["input_ids"],
@@ -142,28 +134,20 @@ def evaluate(args, dataset, model, tokenizer, max_seq_length, accelerator, data_
                 early_stopping=True
             )
 
-        # Compute input length once
         input_length = inputs['input_ids'].shape[1]
-
-        # Extract generated tokens by skipping the input_ids
         generated_ids = outputs[:, input_length:]
-
-        # Decode the generated tokens in batch
         predicted_sqls = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
 
-        # Access necessary fields from the batch
         table_names = batch['table_name']
         selected_fields_list = batch['selected_fields']
         sql_statements = batch['sql_statement']
         english_prompts = batch['english_prompt']
         create_statements = batch['create_statement']
 
-        # Evaluate predictions and accumulate scores
         batch_prediction_scores = []
         batch_gt_scores = []
         for i in range(len(predicted_sqls)):
             predicted_sql = predicted_sqls[i].strip()
-            # Evaluate the prediction
             prediction_score = evaluate_cs1_prediction(
                 table_names[i],
                 selected_fields_list[i],
@@ -177,7 +161,6 @@ def evaluate(args, dataset, model, tokenizer, max_seq_length, accelerator, data_
             batch_prediction_scores.append(prediction_score)
             batch_gt_scores.append(gt_score)
 
-            # Debug information for incorrect predictions
             if args.debug and (prediction_score < 1 or prediction_score < gt_score):
                 print("Table:", table_names[i])
                 print("Selected fields:", selected_fields_list[i])
@@ -188,49 +171,38 @@ def evaluate(args, dataset, model, tokenizer, max_seq_length, accelerator, data_
                 print("Score (Prediction):", prediction_score)
                 print("Score (Ground Truth):", gt_score)
 
-        # Use accelerator to gather scores across devices
-        batch_prediction_scores_tensor = torch.tensor(batch_prediction_scores, device=accelerator.device)
-        batch_gt_scores_tensor = torch.tensor(batch_gt_scores, device=accelerator.device)
-        gathered_prediction_scores = accelerator.gather(batch_prediction_scores_tensor)
-        gathered_gt_scores = accelerator.gather(batch_gt_scores_tensor)
-        total_prediction_score += gathered_prediction_scores.sum().item()
-        total_gt_score += gathered_gt_scores.sum().item()
-        num_samples += len(gathered_prediction_scores)
+        batch_prediction_scores_tensor = torch.tensor(batch_prediction_scores)
+        batch_gt_scores_tensor = torch.tensor(batch_gt_scores)
+        total_prediction_score += batch_prediction_scores_tensor.sum().item()
+        total_gt_score += batch_gt_scores_tensor.sum().item()
+        num_samples += len(batch_prediction_scores)
 
-    # Calculate the overall accuracy
-    assert num_samples == len(dataset), "Number of samples processed should match the dataset size"
     gt_accuracy = (total_gt_score / num_samples) * 100 if num_samples > 0 else 0
     prediction_accuracy = (total_prediction_score / num_samples) * 100 if num_samples > 0 else 0
-    print("Dataset Ground Truth Accuracy:", gt_accuracy)
-    print("Model Prediction Accuracy:", prediction_accuracy)
+    # Log the scores to W&B with the dataset type
+    wandb.log({
+        f"{dataset_type.capitalize()} Ground Truth Accuracy": gt_accuracy,
+        f"{dataset_type.capitalize()} Prediction Accuracy": prediction_accuracy
+    })
+
+    print(f"{dataset_type.capitalize()} Ground Truth Accuracy: {gt_accuracy}")
+    print(f"{dataset_type.capitalize()} Prediction Accuracy: {prediction_accuracy}")
     return gt_accuracy, prediction_accuracy
 
-
 def push_model_to_hf(output_dir, repo_name, organization, commit_message="Add final model and tokenizer files", private=True):
-    # Load model and tokenizer from saved directory
     model = AutoModelForCausalLM.from_pretrained(output_dir)
     tokenizer = AutoTokenizer.from_pretrained(output_dir)
-
-    # Push model to Hugging Face Hub
     model.push_to_hub(repo_id=f"{organization}/{repo_name}", commit_message=commit_message, private=private)
     tokenizer.push_to_hub(repo_id=f"{organization}/{repo_name}", commit_message=commit_message)
-    
     print(f"Model and tokenizer pushed to Hugging Face Hub at {organization}/{repo_name}")
 
 def sft(args):
-    # Initialize the accelerator
-    accelerator = Accelerator(mixed_precision="bf16")
-
-    # Initialize wandb for fine-tuning
-    if accelerator.is_main_process:
-        wandb.init(project=args.wandb_project, name=args.wandb_run_name, entity="dhruv-gretel")
+    wandb.init(project=args.wandb_project, name=args.wandb_run_name, entity="dhruv-gretel")
     try:
-        # Load the dataset for fine-tuning
         train_dataset = load_dataset(args.dataset_name, split="train")
         val_dataset = load_dataset(args.dataset_name, split="validation")
         test_dataset = load_dataset(args.dataset_name, split="test")
 
-        # Load tokenizer and model with correct use of use_auth_token
         tokenizer = AutoTokenizer.from_pretrained(args.model_name, use_auth_token=args.hf_token)
         tokenizer.model_max_length = args.max_seq_length
         tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -238,31 +210,20 @@ def sft(args):
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-            #device_map="auto",
             use_auth_token=args.hf_token,
+            device_map="auto",
             attn_implementation="flash_attention_2",
         )
-
-        # Move the model to the device before setting attn_implementation
-        model.to(accelerator.device)
-    
-        # Now set attn_implementation
         model.config.attn_implementation = "flash_attention_2"
 
-        model, tokenizer = accelerator.prepare(model, tokenizer)
-
-        # Define the prompt template without including the answer
         alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
 
         def preprocess_function(examples):
-            # Prepare prompts and responses using Alpaca format
             prompts = [
-                alpaca_prompt.format(instruction, context, "")
+                alpaca_prompt.format(instruction, context)
                 for instruction, context in zip(examples["english_prompt"], examples["create_statement"])
             ]
             responses = [sql + tokenizer.eos_token for sql in examples["sql_statement"]]
-
-            # Tokenize prompts and responses separately
             prompt_encodings = tokenizer(prompts, truncation=True, max_length=args.max_seq_length, add_special_tokens=True)
             response_encodings = tokenizer(responses, truncation=True, max_length=args.max_seq_length, add_special_tokens=False)
 
@@ -271,76 +232,54 @@ def sft(args):
             attention_mask_list = []
 
             for prompt_ids, response_ids in zip(prompt_encodings["input_ids"], response_encodings["input_ids"]):
-                # Adjust lengths to accommodate max_seq_length
                 total_length = len(prompt_ids) + len(response_ids)
                 if total_length > args.max_seq_length:
                     overflow = total_length - args.max_seq_length
-                    # Truncate prompt to make space for response
                     prompt_ids = prompt_ids[:-overflow]
 
                 input_ids = prompt_ids + response_ids
-                labels = [-100] * len(prompt_ids) + response_ids  # Mask prompt tokens in labels
+                labels = [-100] * len(prompt_ids) + response_ids
                 attention_mask = [1] * len(input_ids)
 
-                # Pad to max_seq_length
                 padding_length = args.max_seq_length - len(input_ids)
                 input_ids += [tokenizer.pad_token_id] * padding_length
                 labels += [-100] * padding_length
                 attention_mask += [0] * padding_length
-
-                if args.debug:
-                    # Decode and print the filtered input_ids tokens where labels are not -100
-                    filtered_input_ids_labels = [id for id, label in zip(input_ids, labels) if label != -100]
-                    print("Decoded input_ids (where labels != -100):", tokenizer.decode(filtered_input_ids_labels))
-                    # Decode and print the filtered input_ids tokens where attention_mask is not 0
-                    filtered_input_ids_attention = [id for id, mask in zip(input_ids, attention_mask) if mask != 0]
-                    print("Decoded input_ids (where attention_mask != 0):", tokenizer.decode(filtered_input_ids_attention))
 
                 input_ids_list.append(input_ids)
                 labels_list.append(labels)
                 attention_mask_list.append(attention_mask)
 
             return {"input_ids": input_ids_list, "labels": labels_list, "attention_mask": attention_mask_list}
-        
-        # Select 12 samples
-        if args.debug:
-            train_dataset = train_dataset.select(range(12))
-            val_dataset = val_dataset.select(range(12))
 
-        # Apply the preprocessing function to the datasets
-        train_dataset = train_dataset.map(
+        # if args.debug:
+        #     train_dataset = train_dataset.select(range(12))
+        #     val_dataset = val_dataset.select(range(12))
+
+        train_dataset_processed = train_dataset.map(
             preprocess_function,
             batched=True,
             remove_columns=train_dataset.column_names,
         )
-        val_dataset = val_dataset.map(
+        val_dataset_processed = val_dataset.map(
             preprocess_function,
             batched=True,
             remove_columns=val_dataset.column_names,
         )
 
-        train_dataset, val_dataset, test_dataset = accelerator.prepare(train_dataset, val_dataset, test_dataset)
-
-        # Calculate steps per epoch for eval_steps and save_steps
-        num_training_examples = len(train_dataset)
-
-        # Effective batch size = per_device_train_batch_size * gradient_accumulation_steps * num_devices
-        # num_devices is only added for data parallelism, not model parallelism
+        num_training_examples = len(train_dataset_processed)
         num_devices = torch.cuda.device_count() if torch.cuda.is_available() else 1
-        effective_batch_size = args.batch_size * args.gradient_accumulation_steps * num_devices
+        effective_batch_size = args.batch_size * args.gradient_accumulation_steps # * num_devices
         steps_per_epoch = max(1, num_training_examples // effective_batch_size)
         eval_steps = steps_per_epoch // 16
         save_steps = steps_per_epoch // 2
         print(f"Steps per epoch: {steps_per_epoch}, Eval steps: {eval_steps}")
-        #import pdb; pdb.set_trace()
 
-        # Prepare data collator
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=tokenizer,
             mlm=False,
         )
 
-        # Define training arguments
         training_args = TrainingArguments(
             per_device_train_batch_size=args.batch_size,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
@@ -348,8 +287,7 @@ def sft(args):
             num_train_epochs=args.num_train_epochs,
             learning_rate=args.learning_rate,
             evaluation_strategy="steps",
-            #bf16=torch.cuda.is_available() and torch.cuda.get_device_capability(0)[0] >= 8,  # Use bf16 if supported
-            logging_steps=1, # Log every step
+            logging_steps=1,
             eval_steps=eval_steps,
             save_steps=save_steps,
             optim="adamw_torch",
@@ -361,48 +299,55 @@ def sft(args):
             remove_unused_columns=False
         )
 
-        evaluation_callback = EvaluationCallback(evaluate_fn=evaluate)
-
-        # Define trainer and start training
         trainer = SFTTrainer(
             model=model,
             tokenizer=tokenizer,
-            train_dataset=train_dataset,
-            eval_dataset=val_dataset,
+            train_dataset=train_dataset_processed,
+            eval_dataset=val_dataset_processed,
             data_collator=data_collator,
             max_seq_length=args.max_seq_length,
             args=training_args,
-            callbacks=[evaluation_callback],
         )
 
-        # Train the model
+        # Create the evaluation callback
+        evaluation_callback = EvaluationCallback(
+            evaluate_fn=evaluate,
+            trainer=trainer,
+            dataset=val_dataset,
+            model=model,
+            tokenizer=tokenizer,
+            max_seq_length=args.max_seq_length,
+            dataset_type="validation"
+        )
+        trainer.add_callback(evaluation_callback)
+
+        # Evaluate the model before fine-tuning
+        evaluate(args, val_dataset, model, tokenizer, args.max_seq_length, dataset_type="validation")
+        evaluate(args, test_dataset, model, tokenizer, args.max_seq_length, dataset_type="test")
+
         trainer.train()
 
-        # Evaluate the model on the test set
-        # Push model to huggingface hub
-        if accelerator.is_main_process:
-            evaluate(args, test_dataset, model, tokenizer, args.max_seq_length, accelerator, data_collator)
-            unwrapped_model = accelerator.unwrap_model(model)
-            # Save the model and tokenizer after training
-            unwrapped_model.save_pretrained(args.output_dir)
-            tokenizer.save_pretrained(args.output_dir)
-            print(f"Model and tokenizer saved in {args.output_dir}")
-            push_model_to_hf(args.output_dir, args.wandb_run_name, "dhruvnathawani")
+        # Evaluate the model after fine-tuning
+        evaluate(args, val_dataset, model, tokenizer, args.max_seq_length, dataset_type="validation")
+        evaluate(args, test_dataset, model, tokenizer, args.max_seq_length, dataset_type="test")
+
+        unwrapped_model = model
+        unwrapped_model.save_pretrained(args.output_dir)
+        tokenizer.save_pretrained(args.output_dir)
+        print(f"Model and tokenizer saved in {args.output_dir}")
+        push_model_to_hf(args.output_dir, args.wandb_run_name, "dhruvnathawani")
 
     finally:
-        # End the W&B run
-        if accelerator.is_main_process:
-            wandb.finish()
+        wandb.finish()
 
 if __name__ == "__main__":
     args = parse_args()
-    
+
     if args.sft:
         sft(args)
     if args.evaluate:
         evaluate(args)
     
-    # Handle the case where neither flag is provided
     if not args.sft and not args.evaluate:
         print("Please specify either --sft, --evaluate, or both")
         sys.exit(1)
