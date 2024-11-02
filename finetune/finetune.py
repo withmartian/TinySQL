@@ -5,10 +5,14 @@ import torch
 import pandas as pd
 import warnings
 from tqdm import tqdm
+
 warnings.filterwarnings("ignore")
 
 import sys
-sys.path.append('/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql/training_data')
+
+sys.path.append(
+    "/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql/training_data"
+)
 from generate_CS1 import evaluate_cs1_prediction
 
 import wandb
@@ -19,34 +23,92 @@ from transformers import TrainerCallback
 from transformers import DataCollatorForLanguageModeling
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 
+
 def parse_args():
-    parser = argparse.ArgumentParser(description="Fine-tune and/or evaluate a model with custom arguments")
+    parser = argparse.ArgumentParser(
+        description="Fine-tune and/or evaluate a model with custom arguments"
+    )
 
     # Add arguments
-    parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.2-1B-Instruct", help="Model name or path")
-    parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate for fine-tuning")
-    parser.add_argument("--num_train_epochs", type=float, default=1, help="Number of epochs")
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size per device")
-    parser.add_argument("--gradient_accumulation_steps", type=int, default=8, help="Gradient accumulation steps")
-    parser.add_argument("--dataset_name", type=str, default="dhruvnathawani/cs1_dataset", help="Dataset name or path")
-    parser.add_argument("--output_dir", type=str, default="models/debug", help="Directory to save the model")
-    parser.add_argument("--hf_token", type=str, required=True, help="Hugging Face authentication token")
-    parser.add_argument("--seed", type=int, default=420, help="Random seed for reproducibility")
-    parser.add_argument("--wandb_project", type=str, default="sql_interp", help="W&B project name")
-    parser.add_argument("--wandb_run_name", type=str, default="debug", help="W&B run name")
-    parser.add_argument("--weight_decay", type=float, default=0.1, help="Weight decay for fine-tuning")
-    parser.add_argument("--warmup_steps", type=int, default=10, help="Warmup steps for fine-tuning")
-    parser.add_argument("--max_seq_length", type=int, default=512, help="Maximum sequence length")
+    parser.add_argument(
+        "--model_name",
+        type=str,
+        default="meta-llama/Llama-3.2-1B-Instruct",
+        help="Model name or path",
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=2e-5,
+        help="Learning rate for fine-tuning",
+    )
+    parser.add_argument(
+        "--num_train_epochs", type=float, default=1, help="Number of epochs"
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=32, help="Batch size per device"
+    )
+    parser.add_argument(
+        "--gradient_accumulation_steps",
+        type=int,
+        default=8,
+        help="Gradient accumulation steps",
+    )
+    parser.add_argument(
+        "--dataset_name",
+        type=str,
+        default="dhruvnathawani/cs1_dataset",
+        help="Dataset name or path",
+    )
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="models/debug",
+        help="Directory to save the model",
+    )
+    parser.add_argument(
+        "--hf_token", type=str, required=True, help="Hugging Face authentication token"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=420, help="Random seed for reproducibility"
+    )
+    parser.add_argument(
+        "--wandb_project", type=str, default="sql_interp", help="W&B project name"
+    )
+    parser.add_argument(
+        "--wandb_run_name", type=str, default="debug", help="W&B run name"
+    )
+    parser.add_argument(
+        "--weight_decay", type=float, default=0.1, help="Weight decay for fine-tuning"
+    )
+    parser.add_argument(
+        "--warmup_steps", type=int, default=10, help="Warmup steps for fine-tuning"
+    )
+    parser.add_argument(
+        "--max_seq_length", type=int, default=512, help="Maximum sequence length"
+    )
     parser.add_argument("--debug", action="store_true", help="Debug mode")
 
     # Add flags for fine-tuning and evaluation
-    parser.add_argument("--sft", action="store_true", help="Fine-tune the model with SFT")
+    parser.add_argument(
+        "--sft", action="store_true", help="Fine-tune the model with SFT"
+    )
     parser.add_argument("--evaluate", action="store_true", help="Evaluate the model")
 
     return parser.parse_args()
 
+
 class EvaluationCallback(TrainerCallback):
-    def __init__(self, evaluate_fn, trainer, dataset, model, tokenizer, max_seq_length, dataset_type):
+    def __init__(
+        self,
+        evaluate_fn,
+        trainer,
+        dataset,
+        model,
+        tokenizer,
+        max_seq_length,
+        dataset_type,
+    ):
         super().__init__()
         self.evaluate_fn = evaluate_fn
         self.trainer = trainer
@@ -59,68 +121,95 @@ class EvaluationCallback(TrainerCallback):
     def on_evaluate(self, args, state, control, **kwargs):
         # Call the evaluate function with all required arguments
         gt_score, prediction_score = self.evaluate_fn(
-            args, 
-            self.dataset, 
-            self.model, 
-            self.tokenizer, 
-            self.max_seq_length, 
-            self.dataset_type
+            args,
+            self.dataset,
+            self.model,
+            self.tokenizer,
+            self.max_seq_length,
+            self.dataset_type,
         )
 
-def evaluate(args, dataset, model, tokenizer, max_seq_length, dataset_type="validation", batch_size=1024):
+
+def evaluate(
+    args,
+    dataset,
+    model,
+    tokenizer,
+    max_seq_length,
+    dataset_type="validation",
+    batch_size=1024,
+):
     model.eval()
     total_prediction_score = 0
     total_gt_score = 0
     num_samples = 0
 
     # Set tokenizer padding side and special tokens
-    tokenizer.padding_side = 'left'
+    tokenizer.padding_side = "left"
     tokenizer.pad_token = tokenizer.eos_token
 
     if tokenizer.eos_token_id is None:
-        tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids('<|endoftext|>')
+        tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids("<|endoftext|>")
 
     if tokenizer.pad_token_id is None:
-        tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids('<|pad|>')
+        tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids("<|pad|>")
 
     def tokenize_fn(example):
         prompt_text = f"### Instruction:\n{example['english_prompt']}\n### Context:\n{example['create_statement']}\n### Response:\n"
-        tokenized = tokenizer(prompt_text, padding="max_length", truncation=True, max_length=max_seq_length)
-        tokenized['table_name'] = example['table_name']
-        tokenized['selected_fields'] = example['selected_fields']
-        tokenized['sql_statement'] = example['sql_statement']
-        tokenized['english_prompt'] = example['english_prompt']
-        tokenized['create_statement'] = example['create_statement']
+        tokenized = tokenizer(
+            prompt_text,
+            padding="max_length",
+            truncation=True,
+            max_length=max_seq_length,
+        )
+        tokenized["table_name"] = example["table_name"]
+        tokenized["selected_fields"] = example["selected_fields"]
+        tokenized["sql_statement"] = example["sql_statement"]
+        tokenized["english_prompt"] = example["english_prompt"]
+        tokenized["create_statement"] = example["create_statement"]
         return tokenized
 
     tokenized_dataset = dataset.map(tokenize_fn)
-    tokenized_dataset.set_format(type="torch", columns=["input_ids", "attention_mask"], output_all_columns=True)
+    tokenized_dataset.set_format(
+        type="torch", columns=["input_ids", "attention_mask"], output_all_columns=True
+    )
 
     def custom_collate_fn(batch):
-        batch_input_ids = torch.stack([example['input_ids'] for example in batch])
-        batch_attention_mask = torch.stack([example['attention_mask'] for example in batch])
-        batch_table_name = [example['table_name'] for example in batch]
-        batch_selected_fields = [example['selected_fields'] for example in batch]
-        batch_sql_statement = [example['sql_statement'] for example in batch]
-        batch_english_prompt = [example['english_prompt'] for example in batch]
-        batch_create_statement = [example['create_statement'] for example in batch]
+        batch_input_ids = torch.stack([example["input_ids"] for example in batch])
+        batch_attention_mask = torch.stack(
+            [example["attention_mask"] for example in batch]
+        )
+        batch_table_name = [example["table_name"] for example in batch]
+        batch_selected_fields = [example["selected_fields"] for example in batch]
+        batch_sql_statement = [example["sql_statement"] for example in batch]
+        batch_english_prompt = [example["english_prompt"] for example in batch]
+        batch_create_statement = [example["create_statement"] for example in batch]
         return {
-            'input_ids': batch_input_ids,
-            'attention_mask': batch_attention_mask,
-            'table_name': batch_table_name,
-            'selected_fields': batch_selected_fields,
-            'sql_statement': batch_sql_statement,
-            'english_prompt': batch_english_prompt,
-            'create_statement': batch_create_statement,
+            "input_ids": batch_input_ids,
+            "attention_mask": batch_attention_mask,
+            "table_name": batch_table_name,
+            "selected_fields": batch_selected_fields,
+            "sql_statement": batch_sql_statement,
+            "english_prompt": batch_english_prompt,
+            "create_statement": batch_create_statement,
         }
 
-    test_dataloader = DataLoader(tokenized_dataset, batch_size=batch_size, shuffle=False, collate_fn=custom_collate_fn)
+    test_dataloader = DataLoader(
+        tokenized_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=custom_collate_fn,
+    )
 
     for batch in tqdm(test_dataloader, desc="Evaluating"):
-        inputs = {key: val for key, val in batch.items() if key in ["input_ids", "attention_mask"]}
+        inputs = {
+            key: val
+            for key, val in batch.items()
+            if key in ["input_ids", "attention_mask"]
+        }
         # Move inputs to the correct device
-        inputs["input_ids"] = inputs["input_ids"]#.to(device)
-        inputs["attention_mask"] = inputs["attention_mask"]#.to(device)
+        inputs["input_ids"] = inputs["input_ids"]  # .to(device)
+        inputs["attention_mask"] = inputs["attention_mask"]  # .to(device)
 
         with torch.no_grad():
             outputs = model.generate(
@@ -131,32 +220,28 @@ def evaluate(args, dataset, model, tokenizer, max_seq_length, dataset_type="vali
                 pad_token_id=tokenizer.pad_token_id,
                 repetition_penalty=1.1,
                 no_repeat_ngram_size=2,
-                early_stopping=True
+                early_stopping=True,
             )
 
-        input_length = inputs['input_ids'].shape[1]
+        input_length = inputs["input_ids"].shape[1]
         generated_ids = outputs[:, input_length:]
         predicted_sqls = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
 
-        table_names = batch['table_name']
-        selected_fields_list = batch['selected_fields']
-        sql_statements = batch['sql_statement']
-        english_prompts = batch['english_prompt']
-        create_statements = batch['create_statement']
+        table_names = batch["table_name"]
+        selected_fields_list = batch["selected_fields"]
+        sql_statements = batch["sql_statement"]
+        english_prompts = batch["english_prompt"]
+        create_statements = batch["create_statement"]
 
         batch_prediction_scores = []
         batch_gt_scores = []
         for i in range(len(predicted_sqls)):
             predicted_sql = predicted_sqls[i].strip()
             prediction_score = evaluate_cs1_prediction(
-                table_names[i],
-                selected_fields_list[i],
-                predicted_sql
+                table_names[i], selected_fields_list[i], predicted_sql
             )
             gt_score = evaluate_cs1_prediction(
-                table_names[i],
-                selected_fields_list[i],
-                sql_statements[i]
+                table_names[i], selected_fields_list[i], sql_statements[i]
             )
             batch_prediction_scores.append(prediction_score)
             batch_gt_scores.append(gt_score)
@@ -178,32 +263,56 @@ def evaluate(args, dataset, model, tokenizer, max_seq_length, dataset_type="vali
         num_samples += len(batch_prediction_scores)
 
     gt_accuracy = (total_gt_score / num_samples) * 100 if num_samples > 0 else 0
-    prediction_accuracy = (total_prediction_score / num_samples) * 100 if num_samples > 0 else 0
+    prediction_accuracy = (
+        (total_prediction_score / num_samples) * 100 if num_samples > 0 else 0
+    )
     # Log the scores to W&B with the dataset type
-    wandb.log({
-        f"{dataset_type.capitalize()} Ground Truth Accuracy": gt_accuracy,
-        f"{dataset_type.capitalize()} Prediction Accuracy": prediction_accuracy
-    })
+    wandb.log(
+        {
+            f"{dataset_type.capitalize()} Ground Truth Accuracy": gt_accuracy,
+            f"{dataset_type.capitalize()} Prediction Accuracy": prediction_accuracy,
+        }
+    )
 
     print(f"{dataset_type.capitalize()} Ground Truth Accuracy: {gt_accuracy}")
     print(f"{dataset_type.capitalize()} Prediction Accuracy: {prediction_accuracy}")
     return gt_accuracy, prediction_accuracy
 
-def push_model_to_hf(output_dir, repo_name, organization, commit_message="Add final model and tokenizer files", private=True):
+
+def push_model_to_hf(
+    output_dir,
+    repo_name,
+    organization,
+    commit_message="Add final model and tokenizer files",
+    private=True,
+):
     model = AutoModelForCausalLM.from_pretrained(output_dir)
     tokenizer = AutoTokenizer.from_pretrained(output_dir)
-    model.push_to_hub(repo_id=f"{organization}/{repo_name}", commit_message=commit_message, private=private)
-    tokenizer.push_to_hub(repo_id=f"{organization}/{repo_name}", commit_message=commit_message)
-    print(f"Model and tokenizer pushed to Hugging Face Hub at {organization}/{repo_name}")
+    model.push_to_hub(
+        repo_id=f"{organization}/{repo_name}",
+        commit_message=commit_message,
+        private=private,
+    )
+    tokenizer.push_to_hub(
+        repo_id=f"{organization}/{repo_name}", commit_message=commit_message
+    )
+    print(
+        f"Model and tokenizer pushed to Hugging Face Hub at {organization}/{repo_name}"
+    )
+
 
 def sft(args):
-    wandb.init(project=args.wandb_project, name=args.wandb_run_name, entity="dhruv-gretel")
+    wandb.init(
+        project=args.wandb_project, name=args.wandb_run_name, entity="dhruv-gretel"
+    )
     try:
         train_dataset = load_dataset(args.dataset_name, split="train")
         val_dataset = load_dataset(args.dataset_name, split="validation")
         test_dataset = load_dataset(args.dataset_name, split="test")
 
-        tokenizer = AutoTokenizer.from_pretrained(args.model_name, use_auth_token=args.hf_token)
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name, use_auth_token=args.hf_token
+        )
         tokenizer.model_max_length = args.max_seq_length
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
@@ -221,17 +330,31 @@ def sft(args):
         def preprocess_function(examples):
             prompts = [
                 alpaca_prompt.format(instruction, context)
-                for instruction, context in zip(examples["english_prompt"], examples["create_statement"])
+                for instruction, context in zip(
+                    examples["english_prompt"], examples["create_statement"]
+                )
             ]
             responses = [sql + tokenizer.eos_token for sql in examples["sql_statement"]]
-            prompt_encodings = tokenizer(prompts, truncation=True, max_length=args.max_seq_length, add_special_tokens=True)
-            response_encodings = tokenizer(responses, truncation=True, max_length=args.max_seq_length, add_special_tokens=False)
+            prompt_encodings = tokenizer(
+                prompts,
+                truncation=True,
+                max_length=args.max_seq_length,
+                add_special_tokens=True,
+            )
+            response_encodings = tokenizer(
+                responses,
+                truncation=True,
+                max_length=args.max_seq_length,
+                add_special_tokens=False,
+            )
 
             input_ids_list = []
             labels_list = []
             attention_mask_list = []
 
-            for prompt_ids, response_ids in zip(prompt_encodings["input_ids"], response_encodings["input_ids"]):
+            for prompt_ids, response_ids in zip(
+                prompt_encodings["input_ids"], response_encodings["input_ids"]
+            ):
                 total_length = len(prompt_ids) + len(response_ids)
                 if total_length > args.max_seq_length:
                     overflow = total_length - args.max_seq_length
@@ -250,7 +373,11 @@ def sft(args):
                 labels_list.append(labels)
                 attention_mask_list.append(attention_mask)
 
-            return {"input_ids": input_ids_list, "labels": labels_list, "attention_mask": attention_mask_list}
+            return {
+                "input_ids": input_ids_list,
+                "labels": labels_list,
+                "attention_mask": attention_mask_list,
+            }
 
         # if args.debug:
         #     train_dataset = train_dataset.select(range(12))
@@ -269,7 +396,9 @@ def sft(args):
 
         num_training_examples = len(train_dataset_processed)
         num_devices = torch.cuda.device_count() if torch.cuda.is_available() else 1
-        effective_batch_size = args.batch_size * args.gradient_accumulation_steps # * num_devices
+        effective_batch_size = (
+            args.batch_size * args.gradient_accumulation_steps
+        )  # * num_devices
         steps_per_epoch = max(1, num_training_examples // effective_batch_size)
         eval_steps = steps_per_epoch // 16
         save_steps = steps_per_epoch // 2
@@ -296,7 +425,7 @@ def sft(args):
             seed=args.seed,
             output_dir=args.output_dir,
             report_to="wandb",
-            remove_unused_columns=False
+            remove_unused_columns=False,
         )
 
         trainer = SFTTrainer(
@@ -317,19 +446,47 @@ def sft(args):
             model=model,
             tokenizer=tokenizer,
             max_seq_length=args.max_seq_length,
-            dataset_type="validation"
+            dataset_type="validation",
         )
         trainer.add_callback(evaluation_callback)
 
         # Evaluate the model before fine-tuning
-        evaluate(args, val_dataset, model, tokenizer, args.max_seq_length, dataset_type="validation")
-        evaluate(args, test_dataset, model, tokenizer, args.max_seq_length, dataset_type="test")
+        evaluate(
+            args,
+            val_dataset,
+            model,
+            tokenizer,
+            args.max_seq_length,
+            dataset_type="validation",
+        )
+        evaluate(
+            args,
+            test_dataset,
+            model,
+            tokenizer,
+            args.max_seq_length,
+            dataset_type="test",
+        )
 
         trainer.train()
 
         # Evaluate the model after fine-tuning
-        evaluate(args, val_dataset, model, tokenizer, args.max_seq_length, dataset_type="validation")
-        evaluate(args, test_dataset, model, tokenizer, args.max_seq_length, dataset_type="test")
+        evaluate(
+            args,
+            val_dataset,
+            model,
+            tokenizer,
+            args.max_seq_length,
+            dataset_type="validation",
+        )
+        evaluate(
+            args,
+            test_dataset,
+            model,
+            tokenizer,
+            args.max_seq_length,
+            dataset_type="test",
+        )
 
         unwrapped_model = model
         unwrapped_model.save_pretrained(args.output_dir)
@@ -340,6 +497,7 @@ def sft(args):
     finally:
         wandb.finish()
 
+
 if __name__ == "__main__":
     args = parse_args()
 
@@ -347,7 +505,7 @@ if __name__ == "__main__":
         sft(args)
     if args.evaluate:
         evaluate(args)
-    
+
     if not args.sft and not args.evaluate:
         print("Please specify either --sft, --evaluate, or both")
         sys.exit(1)

@@ -4,11 +4,12 @@ import numpy as np
 
 # Load the dataset and tokenizer
 dataset = load_dataset("dhruvnathawani/cs1_dataset")
-#model_name = "meta-llama/Llama-3.2-3B-Instruct"
-#TODO: Fix error with this model
-#model_name = "Qwen/Qwen2-0.5B-Instruct-GGUF"
-model_name = "roneneldan/TinyStories-Instruct-2Layers-33M"
+# model_name = "meta-llama/Llama-3.2-3B-Instruct"
+# TODO: Fix error with this model
+model_name = "Qwen/Qwen2-0.5B-Instruct-GGUF"
+#model_name = "roneneldan/TinyStories-Instruct-2Layers-33M"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+
 
 # Function to compute token count per sample
 def compute_token_counts(example):
@@ -16,6 +17,7 @@ def compute_token_counts(example):
     text = f"{example['english_prompt']} {example['create_statement']} {example['sql_statement']}"
     tokens = tokenizer(text, truncation=False)
     return {"token_count": len(tokens["input_ids"])}
+
 
 # Apply the function to compute token counts
 token_counts = dataset["train"].map(compute_token_counts)
