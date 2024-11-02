@@ -14,7 +14,7 @@ batch_size=32
 gradient_accumulation_steps=8
 HF_TOKEN="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"
 warmup_steps=20
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=2,3
 sanitized_project_name=$(echo "$project_name" | tr '/\\:#?%,' '_')
 
 # Average token count per sample: 78.19177777777777
@@ -30,9 +30,7 @@ max_seq_length=512
 # )
 declare -A model_names=(
     ["meta-llama/Llama-3.2-1B-Instruct"]="Llama3.2-1B"
-    #["roneneldan/TinyStories-Instruct-2Layers-33M"]="TinyStories-33M"
     ["Qwen/Qwen2-0.5B-Instruct"]="Qwen2-0.5B"
-    #["new-model/ModelName-Instruct-Version"]="SimplifiedName"
 )
 
 # Define the list of learning rates
@@ -40,9 +38,9 @@ learning_rates=(1e-5 2e-5 5e-5 1e-6 2e-6 5e-6)
 
 experiment_counter=3
 
-for model_name in "${model_names[@]}"; do
+for model_name in "${!model_names[@]}"; do
     #simplified_model_name=$(echo "$model_name" | sed -E 's|.*/||; s/[-.]+/_/g')
-    simplified_model_name="${models[$model_name]}"
+    simplified_model_name="${model_names[$model_name]}"
     echo "Original: $model_name"
     echo "Simplified: $simplified_model_name"
     
@@ -56,7 +54,8 @@ for model_name in "${model_names[@]}"; do
     for lr in "${learning_rates[@]}"; do
         # Create the experiment name like sft_llama3.1_lr_experiment_2.1, 2.2, etc.
         simplified_dataset_name="${dataset_name#*/}"
-        experiment_name="sft_${project_name}_${simplified_model_name}_${simplified_dataset_name}_experiment_${experiment_counter}.${sub_experiment_counter}_TEST"
+        simplified_dataset_name="${simplified_dataset_name%_dataset}"
+        experiment_name="sft_${project_name}_${simplified_model_name}_${simplified_dataset_name}_experiment_${experiment_counter}.${sub_experiment_counter}"
         
         # Print current experiment details
         echo "---------------------------------------------"
