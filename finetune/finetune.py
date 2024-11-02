@@ -253,7 +253,6 @@ def evaluate(
                 for key, value in batch.items()
                 if key not in ['input_ids', 'attention_mask']
             }
-            #import ipdb; ipdb.set_trace()
             item = dict_to_batchitem(item_batch)
             prediction_score = evaluate_cs_function(
                 item, predicted_sql
@@ -481,37 +480,20 @@ def sft(args):
         trainer.add_callback(evaluation_callback)
 
         # Evaluate the model before fine-tuning
-        # evaluate(
-        #     args,
-        #     val_dataset,
-        #     model,
-        #     tokenizer,
-        #     args.max_seq_length,
-        #     evaluate_cs_function,
-        #     dataset_type="validation",
-        # )
-        # evaluate(
-        #     args,
-        #     test_dataset,
-        #     model,
-        #     tokenizer,
-        #     args.max_seq_length,
-        #     evaluate_cs_function,
-        #     dataset_type="test",
-        # )
-
-        trainer.train()
-
-        # Evaluate the model after fine-tuning
         evaluate(
             args,
-            val_dataset,
+            test_dataset,
             model,
             tokenizer,
             args.max_seq_length,
             evaluate_cs_function,
-            dataset_type="validation",
+            dataset_type="test",
         )
+
+        trainer.evaluate()
+        trainer.train()
+
+        # Evaluate the model after fine-tuning
         evaluate(
             args,
             test_dataset,
@@ -526,7 +508,7 @@ def sft(args):
         unwrapped_model.save_pretrained(args.output_dir)
         tokenizer.save_pretrained(args.output_dir)
         print(f"Model and tokenizer saved in {args.output_dir}")
-        push_model_to_hf(args.output_dir, args.wandb_run_name, "withmartian")
+        push_model_to_hf(args.output_dir, args.wandb_run_name, "dhruvnathawani")
 
     finally:
         wandb.finish()
