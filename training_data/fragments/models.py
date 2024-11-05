@@ -44,7 +44,8 @@ class BatchItem:
     table_fields: List[TableField]
     create_statement: str
     select: List[SelectField]
-    order_by: List[OrderField] | None
+    #order_by: List[OrderField] | None
+    order_by: List[OrderField]
     english_prompt: str
     sql_statement: str
 

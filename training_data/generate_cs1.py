@@ -6,6 +6,11 @@ from .sql_create_table import get_sql_create_table
 from .sql_select_from import get_sql_select_from
 from .fragments.models import BatchItem, OrderField, SelectField
 
+from dataclasses import dataclass
+from typing import List
+import pandas as pd
+from datasets import Dataset, DatasetDict
+
 
 def get_english_order_by(fields: list[OrderField]) -> str:
     answer = ""
