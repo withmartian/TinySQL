@@ -8,7 +8,7 @@ else
 fi
 
 project_name="sql_interp"
-dataset_name="withmartian/cs1_dataset"
+dataset_name="withmartian/cs2_dataset"
 num_train_epochs=3
 batch_size=32
 gradient_accumulation_steps=8
@@ -16,7 +16,7 @@ gradient_accumulation_steps=8
 # Insert your Hugging Face API token here
 HF_TOKEN="YOUR_HF_TOKEN"
 warmup_steps=20
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=2,3
 sanitized_project_name=$(echo "$project_name" | tr '/\\:#?%,' '_')
 
 # Average token count per sample: 78.19177777777777
@@ -38,7 +38,7 @@ declare -A model_names=(
 # Define the list of learning rates
 learning_rates=(1e-5 2e-5 5e-5)
 
-experiment_counter=2
+experiment_counter=4
 
 for model_name in "${!model_names[@]}"; do
     #simplified_model_name=$(echo "$model_name" | sed -E 's|.*/||; s/[-.]+/_/g')

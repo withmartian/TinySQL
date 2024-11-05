@@ -12,7 +12,9 @@ dataset_name="withmartian/cs3_dataset"
 num_train_epochs=3
 batch_size=32
 gradient_accumulation_steps=8
-HF_TOKEN="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"
+
+# Insert your Hugging Face API token here
+HF_TOKEN="YOUR_HF_TOKEN"
 warmup_steps=20
 export CUDA_VISIBLE_DEVICES=2,3
 sanitized_project_name=$(echo "$project_name" | tr '/\\:#?%,' '_')
