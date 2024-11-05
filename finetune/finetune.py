@@ -259,7 +259,6 @@ def evaluate(
                 if key not in ['input_ids', 'attention_mask']
             }
             item = dict_to_batchitem(item_batch)
-            import ipdb; ipdb.set_trace()
             prediction_score = evaluate_cs_function(
                 item, predicted_sql
             )
