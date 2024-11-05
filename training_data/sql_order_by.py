@@ -21,7 +21,7 @@ def get_sql_order_by(table_fields : list[TableField]) -> Tuple[list[OrderField],
     # Get number of columns to order by 
     num_columns = random.randint(1, len(table_fields))
     
-    # Select random fields to order by 
+    # Select N fields to order by, in a random order 
     selected_fields = random.sample(table_fields, num_columns)
 
     order_by_fields = [OrderField(name=field.name, asc=asc) for field in selected_fields]

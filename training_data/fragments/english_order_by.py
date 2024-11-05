@@ -113,3 +113,7 @@ def get_english_order_by_phrase(asc : bool) -> str:
     template = random.choice(filtered_phrases)
     
     return template
+
+
+def get_english_order_by_count():
+    return len(get_english_order_by_phrases())

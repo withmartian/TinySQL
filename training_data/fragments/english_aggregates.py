@@ -157,3 +157,7 @@ def get_english_aggregate_phrase():
         phrases = [""]
 
     return (aggregate_function, random.choice(phrases))
+
+
+def get_english_aggregate_count():
+    return len(get_english_max_phrases())+len(get_english_min_phrases())+len(get_english_avg_phrases())+len(get_english_sum_phrases())+len(get_english_count_phrases())

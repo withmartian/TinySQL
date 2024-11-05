@@ -9,7 +9,7 @@ class TestCommandSet3(unittest.TestCase):
 
     def test_generate_cs3(self):
             
-        batch_size = 50
+        batch_size = 3000
         answer = generate_cs3(batch_size)
         
         for i in range(batch_size):

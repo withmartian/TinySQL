@@ -1,12 +1,14 @@
 from .fragments.field_names import (
     get_sql_field_names_and_types,
     get_field_names_and_types_list,
-    get_sql_table_fields
+    get_sql_table_fields,
+    get_field_names_count
 )
 
 from .fragments.table_names import (
     get_sql_table_names,
-    get_sql_table_name
+    get_sql_table_name,
+    get_sql_table_name_count
 )
 
 from .sql_create_table import get_sql_create_table
@@ -19,11 +21,13 @@ from .fragments.english_aggregates import (
     get_english_min_phrases,
     get_english_max_phrases,
     get_english_count_phrases,
-    get_english_aggregate_phrase
+    get_english_aggregate_phrase,
+    get_english_aggregate_count
 )
 
-from .fragments.english_select_from import get_english_select_from_phrase
-from .fragments.english_order_by import get_english_order_by_phrase
+from .fragments.english_select_from import get_english_select_from_phrase, get_english_select_from_count
+
+from .fragments.english_order_by import get_english_order_by_phrase, get_english_order_by_count
 
 from .fragments.models import BatchItem, TableField, SelectField, OrderField
 
