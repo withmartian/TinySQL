@@ -27,6 +27,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 
 from training_data.generate_datasets import dict_to_batchitem, batchitem_to_dict
 
+MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2-0.5B-Instruct",]
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Fine-tune and/or evaluate a model with custom arguments"
@@ -115,6 +117,7 @@ class EvaluationCallback(TrainerCallback):
         max_seq_length,
         evaluate_cs_function,
         dataset_type,
+        batch_size,
     ):
         super().__init__()
         self.evaluate_fn = evaluate_fn
@@ -125,6 +128,7 @@ class EvaluationCallback(TrainerCallback):
         self.max_seq_length = max_seq_length
         self.evaluate_cs_function = evaluate_cs_function
         self.dataset_type = dataset_type
+        self.batch_size = batch_size
 
     def on_evaluate(self, args, state, control, **kwargs):
         # During callback evaluation, only evaluate on 25% of the dataset
@@ -137,6 +141,7 @@ class EvaluationCallback(TrainerCallback):
             self.max_seq_length,
             self.evaluate_cs_function,
             self.dataset_type,
+            self.batch_size
         )
 
 
@@ -224,8 +229,8 @@ def evaluate(
             if key in ["input_ids", "attention_mask"]
         }
         # Move inputs to the correct device
-        inputs["input_ids"] = inputs["input_ids"]  # .to(device)
-        inputs["attention_mask"] = inputs["attention_mask"]  # .to(device)
+        inputs["input_ids"] = inputs["input_ids"].to(model.device)
+        inputs["attention_mask"] = inputs["attention_mask"].to(model.device)
 
         with torch.no_grad():
             outputs = model.generate(
@@ -254,6 +259,7 @@ def evaluate(
                 if key not in ['input_ids', 'attention_mask']
             }
             item = dict_to_batchitem(item_batch)
+            import ipdb; ipdb.set_trace()
             prediction_score = evaluate_cs_function(
                 item, predicted_sql
             )
@@ -346,12 +352,16 @@ def sft(args):
 
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
-            torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
+            torch_dtype="auto", #torch.bfloat16 if torch.cuda.is_available() else torch.float32,
             use_auth_token=args.hf_token,
             device_map="auto",
-            attn_implementation="flash_attention_2",
+            #attn_implementation="flash_attention_2",
         )
-        model.config.attn_implementation = "flash_attention_2"
+        if model in MODELS_WITH_FLASH_ATTENTION:
+            model.config.attn_implementation = "flash_attention_2"
+            eval_batch_size = 1024
+        else:
+            eval_batch_size = 256
 
         alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
 
@@ -428,7 +438,7 @@ def sft(args):
             args.batch_size * args.gradient_accumulation_steps
         )  # * num_devices
         steps_per_epoch = max(1, num_training_examples // effective_batch_size)
-        eval_steps = steps_per_epoch // 16
+        eval_steps = steps_per_epoch // 8 # previously set to 16
         save_steps = steps_per_epoch // 2
         print(f"Steps per epoch: {steps_per_epoch}, Eval steps: {eval_steps}")
 
@@ -476,6 +486,7 @@ def sft(args):
             max_seq_length=args.max_seq_length,
             evaluate_cs_function=evaluate_cs_function,
             dataset_type="validation",
+            batch_size=eval_batch_size,
         )
         trainer.add_callback(evaluation_callback)
 
@@ -488,6 +499,7 @@ def sft(args):
             args.max_seq_length,
             evaluate_cs_function,
             dataset_type="test",
+            batch_size=eval_batch_size,
         )
 
         trainer.evaluate()
@@ -502,6 +514,7 @@ def sft(args):
             args.max_seq_length,
             evaluate_cs_function,
             dataset_type="test",
+            batch_size=eval_batch_size,
         )
 
         unwrapped_model = model
