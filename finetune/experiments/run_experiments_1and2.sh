@@ -8,13 +8,13 @@ else
 fi
 
 project_name="sql_interp"
-dataset_name="withmartian/cs2_dataset"
+dataset_name="withmartian/cs1_dataset"
 num_train_epochs=3
 batch_size=32
 gradient_accumulation_steps=8
 HF_TOKEN="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"
 warmup_steps=20
-export CUDA_VISIBLE_DEVICES=2,3
+export CUDA_VISIBLE_DEVICES=0,1
 sanitized_project_name=$(echo "$project_name" | tr '/\\:#?%,' '_')
 
 # Average token count per sample: 78.19177777777777
@@ -29,14 +29,14 @@ max_seq_length=512
 #     "Qwen/Qwen2-0.5B-Instruct"
 # )
 declare -A model_names=(
-    ["meta-llama/Llama-3.2-1B-Instruct"]="Llama3.2-1B"
+    #["meta-llama/Llama-3.2-1B-Instruct"]="Llama3.2-1B"
     ["Qwen/Qwen2-0.5B-Instruct"]="Qwen2-0.5B"
 )
 
 # Define the list of learning rates
-learning_rates=(1e-5 2e-5 5e-5 1e-6 2e-6 5e-6)
+learning_rates=(1e-5 2e-5 5e-5)
 
-experiment_counter=3
+experiment_counter=2
 
 for model_name in "${!model_names[@]}"; do
     #simplified_model_name=$(echo "$model_name" | sed -E 's|.*/||; s/[-.]+/_/g')
