@@ -37,7 +37,7 @@ class TestCommandSet1(unittest.TestCase):
 
     def test_generate_cs1(self):
             
-        batch_size = 50
+        batch_size = 3000
         answer = generate_cs1(batch_size)
         
         for i in range(batch_size):
@@ -50,6 +50,9 @@ class TestCommandSet1(unittest.TestCase):
                 print("Prompt:", answer[i].english_prompt)
                 print("SQL:", answer[i].sql_statement)
                 print("Accuracy:", accuracy)
+
+            if accuracy < 1:
+                accuracy = evaluate_cs1_prediction(answer[i], answer[i].sql_statement)
 
             # The "ground truth" should score 100%              
             assert(accuracy == 1)

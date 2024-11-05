@@ -97,3 +97,7 @@ def get_english_select_from_phrase() -> str:
     phrase = random.choice(phrases)
 
     return phrase
+
+
+def get_english_select_from_count():
+    return len(get_english_select_from_phrases())

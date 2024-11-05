@@ -19,16 +19,23 @@ def get_field_names_and_types_list() -> List[Tuple[str, List[str]]]:
     return list(get_sql_field_names_and_types().items())
 
 
-def get_sql_table_fields(N: int) -> List[TableField]:
+def get_sql_table_fields(table_name: str, N: int) -> List[TableField]:
     """Return N random SQL field names with an associated data type."""
     # Get the cached list of field names and their possible types
     field_names = get_field_names_and_types_list()
     
-    # Sample N items from the list
+    # Sample N items from the list, in a random order
     selected_fields = random.sample(field_names, N)
     
     # For each selected field, choose one random type from its possible types
-    return [TableField(name=name, type=random.choice(types)) for name, types in selected_fields]
+    answer = [TableField(name=name, type=random.choice(types)) for name, types in selected_fields]
+
+    # If the table name is also a field name, change add "_field" to the field name
+    for a_field in answer:
+        if a_field.name == table_name:
+            a_field.name += "_field"
+
+    return answer
 
 
 def get_sql_select_fields( table_fields: List[TableField], N: int, use_aggregates: bool) -> List[SelectField]:
@@ -73,6 +80,10 @@ def get_sql_select_fields( table_fields: List[TableField], N: int, use_aggregate
             selected_fields += [SelectField(name=field_name, aggregate="")]
 
     return selected_fields
+
+
+def get_field_names_count():
+    return len(get_field_names_and_types_list())
 
 
 def combine_column_types(dict1, dict2):

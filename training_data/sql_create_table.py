@@ -24,7 +24,7 @@ def get_sql_create_table(min_cols, max_cols) -> Tuple[str, List[Tuple[str, str]]
     num_columns = random.randint(min_cols, max_cols)
     
     # Select random fields and ensure no duplicates
-    selected_fields = get_sql_table_fields(num_columns)
+    selected_fields = get_sql_table_fields(table_name, num_columns)
     
     # Build the CREATE TABLE statement
     sql_parts = [f"CREATE TABLE {table_name} ("]

@@ -754,14 +754,8 @@ def get_sql_table_names_chatgpt():
 
 
 def get_sql_table_name() -> str:
-    """
-    Returns N random unique table names.
-    
-    Args:
-        N (int): Number of table names to return
-        
-    Returns:
-        List[str]: List of N random unique table names
-    """
     all_tables = get_sql_table_names()
     return random.choice(all_tables)
+
+def get_sql_table_name_count():
+    return len(get_sql_table_names())
