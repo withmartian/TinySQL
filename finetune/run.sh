@@ -12,7 +12,9 @@ dataset_name="dhruvnathawani/cs1_dataset"
 num_train_epochs=1
 batch_size=128
 gradient_accumulation_steps=8
-HF_TOKEN="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"
+
+# Insert your Hugging Face API token here
+HF_TOKEN="YOUR_HF_TOKEN"
 warmup_steps=20
 sanitized_project_name=$(echo "$project_name" | tr '/\\:#?%,' '_')
 
