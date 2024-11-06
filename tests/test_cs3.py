@@ -1,6 +1,6 @@
 import unittest
 
-from training_data import (generate_cs3, evaluate_cs3_prediction)
+from QuantaTextToSql.training_data import (generate_cs3, evaluate_cs3_prediction)
 
 
 # Command Set 3 = MAX, MIN, AVG, SUM, COUNT

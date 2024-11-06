@@ -1,6 +1,6 @@
 import unittest
 
-from training_data import ( get_english_aggregate_phrase, get_english_select_from_phrase, 
+from QuantaTextToSql.training_data import ( get_english_aggregate_phrase, get_english_select_from_phrase, 
     get_english_order_by_phrase, get_sql_table_fields, get_sql_table_name,
     get_english_aggregate_count, get_field_names_count, get_sql_table_name_count, get_english_select_from_count, get_english_order_by_count)
 
