@@ -1,6 +1,6 @@
 import unittest
 
-from training_data import get_sql_create_table, get_sql_select_from, get_english_select_from, generate_cs1, evaluate_cs1_prediction
+from QuantaTextToSql.training_data import get_sql_create_table, get_sql_select_from, get_english_select_from, generate_cs1, evaluate_cs1_prediction
 
 
 # Command Set 1 = SELECT, FROM

@@ -1,6 +1,6 @@
 import unittest
 
-from training_data import (generate_cs2, evaluate_cs2_prediction)
+from QuantaTextToSql.training_data import (generate_cs2, evaluate_cs2_prediction)
 
 
 # Command Set 2 = ORDER BY ASC, DESC
