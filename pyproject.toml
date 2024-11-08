@@ -28,3 +28,6 @@ requires = ">=3.10"
 
 [tool.setuptools]
 packages = ["QuantaTextToSql"]
+
+[tool.setuptools.package-dir]
+QuantaTextToSql="QuantaTextToSql"
