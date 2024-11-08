@@ -6,11 +6,6 @@ from .sql_create_table import get_sql_create_table
 from .sql_select_from import get_sql_select_from
 from .fragments.models import BatchItem, OrderField, SelectField
 
-from dataclasses import dataclass
-from typing import List
-import pandas as pd
-from datasets import Dataset, DatasetDict
-
 
 def get_english_order_by(fields: list[OrderField]) -> str:
     answer = ""
@@ -90,6 +85,25 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12):
     return batch
 
 
+def evaluate_unrecognised_words(recognized_words, test_tokens):
+    unrecognized_words = [token for token in test_tokens if token not in recognized_words]
+    total_points = 5
+    if len(unrecognized_words) == 0:
+        points_earned = 5
+    elif len(unrecognized_words) == 1:     
+        points_earned = 4
+    elif len(unrecognized_words) == 2:     
+        points_earned = 3
+    elif len(unrecognized_words) <= 4:     
+        points_earned = 2
+    elif len(unrecognized_words) <= 8:     
+        points_earned = 1
+    else:     
+        points_earned = 0
+
+    return (points_earned, total_points)
+
+
 # Returns accuracy of a "command set 1" predicted answer compared to the ground truth
 def evaluate_cs1_prediction_score_part1(item: BatchItem, predicted_sql_statement: str):
 
@@ -136,36 +150,36 @@ def evaluate_cs1_prediction_score_part2(item: BatchItem, predicted_sql_statement
     # - All field names are after SELECT    N points
     # - Word FROM is after all field names  1 point
     # - Word table_name is after FROM       1 point   
-    # - There are no unrecognized words     1 point
+    # - There are no unrecognized words     5 point
 
     total_points = 0  
     points_earned = 0
 
     # Tokenize the predicted SQL statement
-    tokens = predicted_sql_statement.strip().split()
-    tokens_upper = [token.upper().strip(',') for token in tokens]
+    tokens = predicted_sql_statement.split()
+    test_tokens = [token.strip(',') for token in tokens]
 
     # Criterion: Contains field names
     for field in item.select:
         total_points += 1
-        if field.name.upper() in tokens_upper:
+        if field.name.upper() in test_tokens:
             points_earned += 1
 
     # Criterion: All field names are after SELECT 
-    if 'SELECT' in tokens_upper:
-        select_index = tokens_upper.index('SELECT')
+    if 'SELECT' in test_tokens:
+        select_index = test_tokens.index('SELECT')
         for field in item.select:
-            field_indices = [i for i, token in enumerate(tokens_upper) if token == field.name.upper()]
+            field_indices = [i for i, token in enumerate(test_tokens) if token == field.name.upper()]
 
             total_points += 1
             if all(i > select_index for i in field_indices):
                 points_earned += 1
 
     # Criterion: Word FROM is after all field names 
-    if 'FROM' in tokens_upper:
-        from_index = tokens_upper.index('FROM')
+    if 'FROM' in test_tokens:
+        from_index = test_tokens.index('FROM')
         last_field_index = max(
-            [i for i, token in enumerate(tokens_upper) if token in [f.name.upper() for f in item.select]],
+            [i for i, token in enumerate(test_tokens) if token in [f.name.upper() for f in item.select]],
             default=-1
         )
         total_points += 1
@@ -173,9 +187,9 @@ def evaluate_cs1_prediction_score_part2(item: BatchItem, predicted_sql_statement
             points_earned += 1
 
     # Criterion: table_name is after FROM 
-    if 'FROM' in tokens_upper and item.table_name.upper() in tokens_upper:
-        from_index = tokens_upper.index('FROM')
-        table_name_index = tokens_upper.index(item.table_name.upper())
+    if 'FROM' in test_tokens and item.table_name.upper() in test_tokens:
+        from_index = test_tokens.index('FROM')
+        table_name_index = test_tokens.index(item.table_name.upper())
 
         total_points += 1
         if table_name_index > from_index:
@@ -183,10 +197,9 @@ def evaluate_cs1_prediction_score_part2(item: BatchItem, predicted_sql_statement
 
     # Criterion: There are no unrecognized words 
     recognized_words = ['SELECT', 'FROM', item.table_name.upper()] + [field.name.upper() for field in item.select]
-    unrecognized_words = [token for token in tokens_upper if token not in recognized_words]
-    total_points += 1
-    if len(unrecognized_words) == 0:
-        points_earned += 1
+    (possible, earned) = evaluate_unrecognised_words(recognized_words, test_tokens)
+    total_points += possible
+    points_earned += earned
  
     return (points_earned, total_points)
 
@@ -198,8 +211,19 @@ def evaluate_cs1_prediction_score(item, predicted_sql_statement):
     return (points_earned_part1+points_earned_part2, total_points_part1+total_points_part2)
 
 
+# Remove newlines, multiple spaces, leading/trailing spaces and upper case
+def trim_sql_statement(sql_statement: str) -> str:
+    clean_tokens = sql_statement.upper().replace('\n', ' ').strip().split()
+    return ' '.join(clean_tokens)
+
+
 def evaluate_cs1_prediction(item: BatchItem, predicted_sql_statement: str) -> float:
-    (points_earned_part, total_points_part) = evaluate_cs1_prediction_score(item, predicted_sql_statement)
+
+    test_sql_statement = trim_sql_statement(predicted_sql_statement)
+    if test_sql_statement == "":
+        return 0.0
+
+    (points_earned_part, total_points_part) = evaluate_cs1_prediction_score(item, test_sql_statement)
 
     accuracy = 1.0 * (points_earned_part) / (total_points_part)
 

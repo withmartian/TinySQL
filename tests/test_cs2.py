@@ -1,6 +1,6 @@
 import unittest
 
-from training_data import (generate_cs2, evaluate_cs2_prediction)
+from QuantaTextToSql.training_data import (generate_cs2, evaluate_cs2_prediction)
 
 
 # Command Set 2 = ORDER BY ASC, DESC
@@ -9,7 +9,7 @@ class TestCommandSet2(unittest.TestCase):
 
     def test_generate_cs2(self):
             
-        batch_size = 50
+        batch_size = 3000
         answer = generate_cs2(batch_size)
         
         for i in range(batch_size):
