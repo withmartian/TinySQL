@@ -18,6 +18,7 @@ from training_data.generate_cs2 import evaluate_cs2_prediction
 from training_data.generate_cs3 import evaluate_cs3_prediction
 
 import wandb
+import trl
 from trl import SFTTrainer
 from datasets import load_dataset
 from torch.utils.data import DataLoader
@@ -471,7 +472,7 @@ def sft(args):
             train_dataset=train_dataset_processed,
             eval_dataset=val_dataset_processed,
             data_collator=data_collator,
-            max_seq_length=args.max_seq_length,
+            #max_seq_length=args.max_seq_length,
             args=training_args,
         )
 
@@ -529,10 +530,8 @@ def sft(args):
 if __name__ == "__main__":
     args = parse_args()
 
-    if args.sft:
+    if args.sft or args.evaluate:
         sft(args)
-    if args.evaluate:
-        evaluate(args)
 
     if not args.sft and not args.evaluate:
         print("Please specify either --sft, --evaluate, or both")
