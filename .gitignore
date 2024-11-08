@@ -1,4 +1,8 @@
-training_data/fragments/__pycache__/*
-training_data/__pycache__/*
-tests/__pycache__/*
 .vs/*
+tests/__pycache__/*
+QuantaTextToSql/finetune/models/
+QuantaTextToSql/finetune/wandb/
+QuantaTextToSql/finetune/old/
+QuantaTextToSql/finetuning/__pycache__/*
+QuantaTextToSql/training_data/fragments/__pycache__/*
+QuantaTextToSql/training_data/__pycache__/*
