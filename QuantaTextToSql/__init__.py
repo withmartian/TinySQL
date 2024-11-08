@@ -1,2 +1,2 @@
-from QuantaTextToSql.training_data import *
-from QuantaTextToSql.finetune import *
+from .training_data import *
+from .finetune import *
