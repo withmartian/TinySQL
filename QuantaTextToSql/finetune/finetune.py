@@ -13,9 +13,9 @@ import sys
 sys.path.append(
     "/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql"
 )
-from training_data.generate_cs1 import evaluate_cs1_prediction
-from training_data.generate_cs2 import evaluate_cs2_prediction
-from training_data.generate_cs3 import evaluate_cs3_prediction
+from QuantaTextToSql.training_data.generate_cs1 import evaluate_cs1_prediction
+from QuantaTextToSql.training_data.generate_cs2 import evaluate_cs2_prediction
+from QuantaTextToSql.training_data.generate_cs3 import evaluate_cs3_prediction
 
 import wandb
 import trl
@@ -26,7 +26,7 @@ from transformers import TrainerCallback
 from transformers import DataCollatorForLanguageModeling
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 
-from training_data.generate_datasets import dict_to_batchitem, batchitem_to_dict
+from QuantaTextToSql.training_data.generate_datasets import dict_to_batchitem, batchitem_to_dict
 
 MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2-0.5B-Instruct",]
 
@@ -71,9 +71,6 @@ def parse_args():
         type=str,
         default="models/debug",
         help="Directory to save the model",
-    )
-    parser.add_argument(
-        "--hf_token", type=str, required=True, help="Hugging Face authentication token"
     )
     parser.add_argument(
         "--seed", type=int, default=420, help="Random seed for reproducibility"
@@ -268,6 +265,7 @@ def evaluate(
             )
             batch_prediction_scores.append(prediction_score)
             batch_gt_scores.append(gt_score)
+            import ipdb; ipdb.set_trace()
 
             # if args.debug and (prediction_score < 1 or prediction_score < gt_score):
             #     print("Table:", table_names[i])
@@ -328,6 +326,10 @@ def sft(args):
     wandb.init(
         project=args.wandb_project, name=args.wandb_run_name, entity=args.wandb_entity
     )
+    # After parsing arguments
+    hf_token = os.environ.get("HF_TOKEN")
+    if hf_token is None:
+        raise ValueError("Hugging Face authentication token not found. Please set the HF_TOKEN environment variable.")
     try:
         # Decide evaluation function based on the dataset
         # withmartian/cs1_dataset
@@ -345,7 +347,7 @@ def sft(args):
         test_dataset = load_dataset(args.dataset_name, split="test")
 
         tokenizer = AutoTokenizer.from_pretrained(
-            args.model_name, use_auth_token=args.hf_token
+            args.model_name, use_auth_token=hf_token
         )
         tokenizer.model_max_length = args.max_seq_length
         tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -353,7 +355,7 @@ def sft(args):
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype="auto", #torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-            use_auth_token=args.hf_token,
+            use_auth_token=hf_token,
             device_map="auto",
             #attn_implementation="flash_attention_2",
         )
