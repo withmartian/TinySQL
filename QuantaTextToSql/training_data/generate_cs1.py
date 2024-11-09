@@ -197,7 +197,7 @@ def evaluate_cs1_prediction_score_part2(item: BatchItem, predicted_sql_statement
 
     # Criterion: There are no unrecognized words 
     recognized_words = ['SELECT', 'FROM', item.table_name.upper()] + [field.name.upper() for field in item.select]
-    (possible, earned) = evaluate_unrecognised_words(recognized_words, test_tokens)
+    (earned, possible) = evaluate_unrecognised_words(recognized_words, test_tokens)
     total_points += possible
     points_earned += earned
  
