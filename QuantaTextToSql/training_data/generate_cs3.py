@@ -72,7 +72,7 @@ def evaluate_cs3_prediction_score(item: BatchItem, predicted_sql_statement: str)
     recognized_words = ['SELECT', 'AS', 'FROM', item.table_name.upper()]
     recognized_words += [field.aggregate_of_field.upper() for field in item.select]
     recognized_words += [field.aggregated_name.upper() for field in item.select if field.aggregate != ""]
-    (possible, earned) = evaluate_unrecognised_words(recognized_words, test_tokens)
+    (earned, possible) = evaluate_unrecognised_words(recognized_words, test_tokens)
     total_points += possible
     points_earned += earned
  
