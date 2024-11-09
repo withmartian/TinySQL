@@ -1,3 +1,6 @@
+# This script is used to fine-tune a model with SQL-interp datasets using the Accelerate library
+
+# Import necessary libraries
 import sys
 import os
 import argparse
@@ -6,17 +9,10 @@ import pandas as pd
 import warnings
 from tqdm import tqdm
 
+# Ignore warnings
 warnings.filterwarnings("ignore")
 
-import sys
-
-sys.path.append(
-    "/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql"
-)
-from QuantaTextToSql.training_data.generate_cs1 import evaluate_cs1_prediction
-from QuantaTextToSql.training_data.generate_cs2 import evaluate_cs2_prediction
-from QuantaTextToSql.training_data.generate_cs3 import evaluate_cs3_prediction
-
+# Pytorch imports
 import wandb
 from trl import SFTTrainer
 from datasets import load_dataset
@@ -25,14 +21,25 @@ from transformers import TrainerCallback
 from transformers import DataCollatorForLanguageModeling
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 
+# QuantaTextToSql evaluation function imports
+import sys
+sys.path.append(
+    "/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql"
+)
+from QuantaTextToSql.training_data.generate_cs1 import evaluate_cs1_prediction
+from QuantaTextToSql.training_data.generate_cs2 import evaluate_cs2_prediction
+from QuantaTextToSql.training_data.generate_cs3 import evaluate_cs3_prediction
 from QuantaTextToSql.training_data.generate_datasets import dict_to_batchitem, batchitem_to_dict
 
+# Accelerate imports
+import torch.distributed as dist
 from accelerate import Accelerator
 from torch.utils.data.distributed import DistributedSampler
 
 # Initialize Accelerator
 accelerator = Accelerator()
 
+# List of models that use Flash Attention
 MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2-0.5B-Instruct",]
 
 def parse_args():
@@ -112,6 +119,7 @@ def parse_args():
 class EvaluationCallback(TrainerCallback):
     def __init__(
         self,
+        args,
         evaluate_fn,
         trainer,
         dataset,
@@ -123,6 +131,7 @@ class EvaluationCallback(TrainerCallback):
         batch_size,
     ):
         super().__init__()
+        self.args = args
         self.evaluate_fn = evaluate_fn
         self.trainer = trainer
         self.dataset = dataset
@@ -137,7 +146,7 @@ class EvaluationCallback(TrainerCallback):
         # During callback evaluation, only evaluate on 25% of the dataset
         eval_dataset = self.dataset#.shuffle(seed=42).select(range(int(len(self.dataset) * 0.25)))
         gt_score, prediction_score = self.evaluate_fn(
-            args,
+            self.args,
             eval_dataset,
             self.model,
             self.tokenizer,
@@ -148,7 +157,6 @@ class EvaluationCallback(TrainerCallback):
             accelerator=self.trainer.accelerator,
             step=state.global_step,  # Pass the current step
         )
-
 
 def evaluate(
     args,
@@ -170,6 +178,7 @@ def evaluate(
 
     # Initialize a list to collect wrong predictions
     wrong_predictions = []
+    right_predictions = []
 
     # Set tokenizer padding side and special tokens
     tokenizer.padding_side = "left"
@@ -266,9 +275,6 @@ def evaluate(
         gen_model = model.module
     else:
         gen_model = model
-    
-    # Add logging to confirm data sharding
-    #print(f"Process {accelerator.process_index} is evaluating with {len(test_dataloader)} batches.")
 
     for batch in tqdm(test_dataloader, desc=f"Process ID:{accelerator.process_index} is evaluating with {len(test_dataloader)} batches."):
         inputs = {
@@ -276,9 +282,6 @@ def evaluate(
             for key, val in batch.items()
             if key in ["input_ids", "attention_mask"]
         }
-        # Move inputs to the correct device
-        #inputs["input_ids"] = inputs["input_ids"].to(model.device)
-        #inputs["attention_mask"] = inputs["attention_mask"].to(model.device)
 
         with torch.no_grad():
             outputs = gen_model.generate(
@@ -316,23 +319,25 @@ def evaluate(
             batch_prediction_scores.append(prediction_score)
             batch_gt_scores.append(gt_score)
 
+            data = {
+                "table_name": item.table_name,
+                "table_fields": item.table_fields,
+                "english_prompt": item.english_prompt,
+                "create_statement": item.create_statement,
+                "sql_statement": item.sql_statement,
+                "predicted_sql": predicted_sql,
+                "prediction_score": prediction_score,
+                "gt_score": gt_score,
+                "command_set": item.command_set,
+                "select": item.select,
+                "order_by": item.order_by,
+                # Add any other fields as needed
+            }
             # Collect wrong predictions
             if prediction_score < 1 or prediction_score < gt_score:
-                data = {
-                    "table_name": item.table_name,
-                    "table_fields": item.table_fields,
-                    "english_prompt": item.english_prompt,
-                    "create_statement": item.create_statement,
-                    "sql_statement": item.sql_statement,
-                    "predicted_sql": predicted_sql,
-                    "prediction_score": prediction_score,
-                    "gt_score": gt_score,
-                    "command_set": item.command_set,
-                    "select": item.select,
-                    "order_by": item.order_by,
-                    # Add any other fields as needed
-                }
                 wrong_predictions.append(data)
+            else:
+                right_predictions.append(data)
         
         # Convert lists to tensors on device
         batch_prediction_scores_tensor = torch.tensor(batch_prediction_scores, device=model.device)
@@ -343,46 +348,54 @@ def evaluate(
         total_gt_score += batch_gt_scores_tensor.sum()
         num_samples += len(batch_prediction_scores)
 
-        #batch_prediction_scores_tensor = torch.tensor(batch_prediction_scores)
-        #batch_gt_scores_tensor = torch.tensor(batch_gt_scores)
-        #total_prediction_score += batch_prediction_scores_tensor.sum().item()
-        #total_gt_score += batch_gt_scores_tensor.sum().item()
-        #num_samples += len(batch_prediction_scores)
-
-        # total_prediction_score = torch.tensor(total_prediction_score, device=model.device)
-        # total_gt_score = torch.tensor(total_gt_score, device=model.device)
-        # num_samples = torch.tensor(num_samples, device=model.device)
-
+        # Accumulate the scores
         total_prediction_score = accelerator.reduce(total_prediction_score, reduction="sum")
         total_gt_score = accelerator.reduce(total_gt_score, reduction="sum")
         num_samples = accelerator.reduce(num_samples, reduction="sum")
-
+        correct_predictions = accelerator.reduce(correct_predictions, reduction="sum")
+        total_predictions = accelerator.reduce(total_predictions, reduction="sum")
 
     # Calculate accuracies
-    gt_accuracy = (total_gt_score.item() / num_samples.item()) * 100 if num_samples.item() > 0 else 0
-    prediction_accuracy = (total_prediction_score.item() / num_samples.item()) * 100 if num_samples.item() > 0 else 0
+    gt_evaluation_score = (total_gt_score.item() / num_samples.item()) * 100 if num_samples.item() > 0 else 0
+    prediction_evaluation_score = (total_prediction_score.item() / num_samples.item()) * 100 if num_samples.item() > 0 else 0
+    simple_accuracy = (correct_predictions.item() / total_predictions.item()) * 100 if total_predictions.item() > 0 else 0
 
-    # Gather wrong predictions
-    all_wrong_predictions = accelerator.gather_object(wrong_predictions)
-
+    # Gather wrong predictions from all processes
+    if dist.is_available() and dist.is_initialized():
+        # Prepare a list to gather wrong_predictions from all processes
+        all_wrong_predictions = [None for _ in range(dist.get_world_size())]
+        all_right_predictions = [None for _ in range(dist.get_world_size())]
+        dist.all_gather_object(all_wrong_predictions, wrong_predictions)
+        dist.all_gather_object(all_right_predictions, right_predictions)
+    else:
+        # If not using distributed training, use single process data
+        all_wrong_predictions = [wrong_predictions]
+    
+    # Only the main process should process and save the data
     if accelerator.is_main_process:
-        # Flatten the list of wrong predictions
+        # Flatten the list of lists
         flat_wrong_predictions = [item for sublist in all_wrong_predictions for item in sublist]
-        # Convert to DataFrame
+        flat_right_predictions = [item for sublist in all_right_predictions for item in sublist]
+        # Create a DataFrame
         wrong_predictions_df = pd.DataFrame(flat_wrong_predictions)
-        # Save the DataFrame to a CSV file
-        wrong_predictions_df.to_csv(f"{args.wandb_run_name}_wrong_predictions_step={step}.csv", index=False)
+        right_predictions_df = pd.DataFrame(flat_right_predictions)
+        # Save the DataFrame to a CSV file with the current step in the filename
+        wrong_predictions_df.to_csv(f"{args.output_dir}/{dataset_type}_wrong_predictions_step_{step}.csv", index=False)
+        right_predictions_df.to_csv(f"{args.output_dir}/{dataset_type}_right_predictions_step_{step}.csv", index=False)
 
         # Log the scores to W&B with the dataset type
         wandb.log(
             {
-                f"{dataset_type.capitalize()} Ground Truth Accuracy": gt_accuracy,
-                f"{dataset_type.capitalize()} Prediction Accuracy": prediction_accuracy,
+                f"{dataset_type.capitalize()} Ground Truth Evaluation Score": gt_evaluation_score,
+                f"{dataset_type.capitalize()} Prediction Evaluation Score": prediction_evaluation_score,
+                f"{dataset_type.capitalize()} Simple Accuracy": simple_accuracy,
             }
         )
-        print(f"{dataset_type.capitalize()} Ground Truth Accuracy: {gt_accuracy}")
-        print(f"{dataset_type.capitalize()} Prediction Accuracy: {prediction_accuracy}")
-    return gt_accuracy, prediction_accuracy
+
+        print(f"{dataset_type.capitalize()} Ground Truth Evaluation Score: {gt_evaluation_score}")
+        print(f"{dataset_type.capitalize()} Prediction Evaluation Score: {prediction_evaluation_score}")
+        print(f"{dataset_type.capitalize()} Simple Accuracy: {simple_accuracy}")
+    return gt_evaluation_score, prediction_evaluation_score, simple_accuracy
 
 def push_model_to_hf(
     output_dir,
@@ -416,7 +429,6 @@ def sft(args):
         raise ValueError("Hugging Face authentication token not found. Please set the HF_TOKEN environment variable.")
     try:
         # Decide evaluation function based on the dataset
-        # withmartian/cs1_dataset
         if "withmartian/cs1_dataset" in args.dataset_name:
             evaluate_cs_function = evaluate_cs1_prediction
         elif "withmartian/cs2_dataset" in args.dataset_name:
@@ -445,10 +457,11 @@ def sft(args):
         )
         if model in MODELS_WITH_FLASH_ATTENTION:
             model.config.attn_implementation = "flash_attention_2"
-            eval_batch_size = 1024
+            eval_batch_size = 512
         else:
             eval_batch_size = 256
 
+        #alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\nProvide the SQL response for the instruction and context above, do not give any additional text\n### Response:\n"""
         alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
 
         def preprocess_function(examples):
@@ -532,9 +545,6 @@ def sft(args):
             mlm=False,
         )
 
-        # Prepare everything with the Accelerator
-        #model, train_dataloader = accelerator.prepare(model, train_dataloader)
-
         training_args = TrainingArguments(
             per_device_train_batch_size=args.batch_size,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
@@ -566,6 +576,7 @@ def sft(args):
 
         # Create the evaluation callback
         evaluation_callback = EvaluationCallback(
+            args=args,
             evaluate_fn=evaluate,
             trainer=trainer,
             dataset=val_dataset,
