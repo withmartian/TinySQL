@@ -18,7 +18,7 @@ from trl import SFTTrainer
 from datasets import load_dataset
 from torch.utils.data import DataLoader
 from transformers import TrainerCallback
-from transformers import DataCollatorForLanguageModeling
+from transformers import DefaultDataCollator
 from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 
 # QuantaTextToSql evaluation function imports
@@ -40,7 +40,7 @@ from torch.utils.data.distributed import DistributedSampler
 accelerator = Accelerator()
 
 # List of models that use Flash Attention
-MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2-0.5B-Instruct",]
+MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2.5-0.5B-Instruct",]
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -88,7 +88,7 @@ def parse_args():
         "--seed", type=int, default=420, help="Random seed for reproducibility"
     )
     parser.add_argument(
-        "--wandb_project", type=str, default="sql_interp", help="W&B project name"
+        "--wandb_project", type=str, default="sft_sql_interp", help="W&B project name"
     )
     parser.add_argument(
         "--wandb_run_name", type=str, default="debug", help="W&B run name"
@@ -145,7 +145,7 @@ class EvaluationCallback(TrainerCallback):
     def on_evaluate(self, args, state, control, **kwargs):
         # During callback evaluation, only evaluate on 25% of the dataset
         eval_dataset = self.dataset#.shuffle(seed=42).select(range(int(len(self.dataset) * 0.25)))
-        gt_score, prediction_score = self.evaluate_fn(
+        self.evaluate_fn(
             self.args,
             eval_dataset,
             self.model,
@@ -171,17 +171,18 @@ def evaluate(
     step=0,  # Add the step parameter with default value
 ):
     model.eval()
-    dataset = dataset.select(range(4))
     total_prediction_score = torch.tensor(0.0, device=model.device)
     total_gt_score = torch.tensor(0.0, device=model.device)
     num_samples = torch.tensor(0, device=model.device)
+    correct_predictions = torch.tensor(0, device=model.device)
+    total_predictions = torch.tensor(0, device=model.device)
 
     # Initialize a list to collect wrong predictions
     wrong_predictions = []
     right_predictions = []
 
     # Set tokenizer padding side and special tokens
-    tokenizer.padding_side = "left"
+    tokenizer.padding_side = "right"
     tokenizer.pad_token = tokenizer.eos_token
 
     def tokenize_fn(example):
@@ -284,7 +285,7 @@ def evaluate(
         }
 
         with torch.no_grad():
-            outputs = gen_model.generate(
+            outputs = accelerator.unwrap_model(gen_model).generate(
                 input_ids=inputs["input_ids"],
                 attention_mask=inputs["attention_mask"],
                 max_new_tokens=50,
@@ -318,6 +319,11 @@ def evaluate(
             )
             batch_prediction_scores.append(prediction_score)
             batch_gt_scores.append(gt_score)
+
+            # Update correct and total predictions
+            if prediction_score == 1.0:
+                correct_predictions += 1
+            total_predictions += 1
 
             data = {
                 "table_name": item.table_name,
@@ -379,9 +385,13 @@ def evaluate(
         # Create a DataFrame
         wrong_predictions_df = pd.DataFrame(flat_wrong_predictions)
         right_predictions_df = pd.DataFrame(flat_right_predictions)
+
+        # Create the predictions directory if it doesn't exist
+        os.makedirs(f"{args.output_dir}/predictions", exist_ok=True)
+
         # Save the DataFrame to a CSV file with the current step in the filename
-        wrong_predictions_df.to_csv(f"{args.output_dir}/{dataset_type}_wrong_predictions_step_{step}.csv", index=False)
-        right_predictions_df.to_csv(f"{args.output_dir}/{dataset_type}_right_predictions_step_{step}.csv", index=False)
+        wrong_predictions_df.to_csv(f"{args.output_dir}/predictions/{dataset_type}_wrong_predictions_step_{step}.csv", index=False)
+        right_predictions_df.to_csv(f"{args.output_dir}/predictions/{dataset_type}_right_predictions_step_{step}.csv", index=False)
 
         # Log the scores to W&B with the dataset type
         wandb.log(
@@ -395,6 +405,9 @@ def evaluate(
         print(f"{dataset_type.capitalize()} Ground Truth Evaluation Score: {gt_evaluation_score}")
         print(f"{dataset_type.capitalize()} Prediction Evaluation Score: {prediction_evaluation_score}")
         print(f"{dataset_type.capitalize()} Simple Accuracy: {simple_accuracy}")
+    
+    model.train()
+
     return gt_evaluation_score, prediction_evaluation_score, simple_accuracy
 
 def push_model_to_hf(
@@ -446,7 +459,9 @@ def sft(args):
             args.model_name, use_auth_token=hf_token
         )
         tokenizer.model_max_length = args.max_seq_length
-        tokenizer.pad_token_id = tokenizer.eos_token_id
+        # Set tokenizer padding side and special tokens
+        tokenizer.padding_side = "right"
+        tokenizer.pad_token = tokenizer.eos_token
 
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
@@ -455,9 +470,9 @@ def sft(args):
             #device_map="auto", # this is for model parallelism
             #attn_implementation="flash_attention_2",
         )
-        if model in MODELS_WITH_FLASH_ATTENTION:
+        if args.model_name in MODELS_WITH_FLASH_ATTENTION:
             model.config.attn_implementation = "flash_attention_2"
-            eval_batch_size = 512
+            eval_batch_size = 1024
         else:
             eval_batch_size = 256
 
@@ -539,11 +554,8 @@ def sft(args):
         save_steps = steps_per_epoch // 2
         if accelerator.is_main_process:
             print(f"Steps per epoch: {steps_per_epoch}, Eval steps: {eval_steps}")
-
-        data_collator = DataCollatorForLanguageModeling(
-            tokenizer=tokenizer,
-            mlm=False,
-        )
+        
+        data_collator = DefaultDataCollator()
 
         training_args = TrainingArguments(
             per_device_train_batch_size=args.batch_size,
