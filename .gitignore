@@ -6,3 +6,6 @@ QuantaTextToSql/finetune/old/
 QuantaTextToSql/finetuning/__pycache__/*
 QuantaTextToSql/training_data/fragments/__pycache__/*
 QuantaTextToSql/training_data/__pycache__/*
+QuantaTextToSql/finetune/__pycache__/
+QuantaTextToSql/__pycache__/
+training_data_old/
