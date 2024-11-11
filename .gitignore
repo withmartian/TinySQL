@@ -3,4 +3,7 @@ QuantaTextToSql/__pycache__/*
 QuantaTextToSql/finetune/__pycache__/*
 QuantaTextToSql/training_data/__pycache__/*
 QuantaTextToSql/training_data/fragments/__pycache__/*
+QuantaTextToSql/finetune/models/
+QuantaTextToSql/finetune/wandb/
+QuantaTextToSql/finetune/old/
 tests/__pycache__/*
