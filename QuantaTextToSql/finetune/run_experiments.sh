@@ -10,7 +10,7 @@ fi
 project_name="sft_sql_interp"
 dataset_names=("withmartian/cs1_dataset" "withmartian/cs2_dataset" "withmartian/cs3_dataset")
 num_train_epochs=3
-batch_size=16
+batch_size=8
 gradient_accumulation_steps=8
 warmup_steps=100
 
@@ -40,7 +40,7 @@ declare -A model_names=(
 )
 
 # Define the list of learning rates
-learning_rates=(1e-5 5e-5 1e-4 5e-4)
+learning_rates=(1e-5 5e-5) # 1e-4 5e-4)
 
 experiment_counter=1
 
@@ -53,7 +53,7 @@ for model_name in "${!model_names[@]}"; do
     # Sanitize the dataset name for use in W&B project
     sanitized_dataset_name=$(echo "$dataset_name" | tr '/\\:#?%,' '_')
 
-    for dataset in "${dataset_names[@]}"; do
+    for dataset_name in "${dataset_names[@]}"; do
         # Loop through each learning rate and run the script
 
         # Start the sub-experiment counter for llama3.1 at 2.x
@@ -78,7 +78,7 @@ for model_name in "${!model_names[@]}"; do
             
             # Run the Python script with the appropriate arguments
             accelerate launch --num_processes 4 \
-            finetune.py \
+            finetune_accelerate.py \
                     --sft \
                     --model_name "$model_name" \
                     --learning_rate "$lr" \
@@ -88,7 +88,6 @@ for model_name in "${!model_names[@]}"; do
                     --gradient_accumulation_steps "$gradient_accumulation_steps" \
                     --dataset_name "$dataset_name" \
                     --output_dir "$model_dir" \
-                    --seed seed \
                     --max_seq_length "$max_seq_length" \
                     --wandb_project "sft_${sanitized_project_name}" \
                     --wandb_entity "dhruv-gretel" \
