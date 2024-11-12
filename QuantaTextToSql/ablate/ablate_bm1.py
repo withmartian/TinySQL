@@ -1,10 +1,19 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
 
 
-def generate_inputs_from_prompt(tokenizer):
-    prompt_text = "Once upon a time, in a small village, there was a"
+def generate_inputs_from_prompt(tokenizer, prompt_text="Once upon a time, in a small village, there was a"):
     inputs = tokenizer(prompt_text, return_tensors="pt")
+    return inputs
+
+def generate_inputs_from_BatchItem(tokenizer, batch_item):
+    prompt_text = batch_item.get_alpaca_prompt()
+    inputs = tokenizer(prompt_text, return_tensors="pt")
+    return inputs
+
+def generate_inputs_from_BatchItems(tokenizer, batch_items):
+    inputs = []
+    for batch_item in batch_items:
+        inputs.append(generate_inputs_from_BatchItem(tokenizer, batch_item))
     return inputs
 
 
@@ -14,10 +23,8 @@ def output_inference_text(tokenizer, title, outputs):
     generated_text = tokenizer.decode(predicted_token_id, skip_special_tokens=True)
     print(f"{title}: {generated_text}")
 
-
 def output_inference_text_no_hook(tokenizer, model, inputs):
     output_inference_text(tokenizer, "Generated Text without Hook", model(**inputs))
-
 
 def output_inference_text_with_hook(tokenizer, model, inputs):
     output_inference_text(tokenizer, "Generated Text with Hook", model(**inputs))
@@ -30,95 +37,83 @@ def load_bm1():
     return tokenizer, model
 
 
-def ablate_bm1_layer(tokenizer, model, layer_index): 
+# Dictionary to store average activations for all layers, heads, and MLPs
+average_bm1_activations = {
+    "attention_head": {},  # Dict of layer -> list of average activations per head
+    "mlp": [],             # List of MLP average activations
+    "layer": []            # List of layer average activations
+}
 
+
+# Function to collect average activations for all heads, MLPs, and layers
+def collect_bm1_activations(model, tokenizer):
     inputs = generate_inputs_from_prompt(tokenizer)
 
-    output_inference_text_no_hook(tokenizer, model, inputs)
-
-
-    def hook_fn(module, input, output):
-        # Ensure the output is a tuple
+    # Hook to collect average activations
+    def collect_activations_hook(module, input, output, layer_index=None, head_index=None):
         if isinstance(output, tuple):
-            # Zero out the attention output (first element of the tuple)
-            modified_attn_output = output[0] * 0
-            # Reconstruct the output tuple with modified attention output
-            modified_output = (modified_attn_output,) + output[1:]
-        else:
-            # If output is not a tuple, apply modification directly
-            modified_output = output * 0
-        return modified_output
+            output = output[0]
+        
+        if layer_index is not None:
+            if head_index is not None:
+                # Store average activation for a specific attention head
+                if layer_index not in average_bm1_activations["attention_head"]:
+                    average_bm1_activations["attention_head"][layer_index] = []
+                while len(average_bm1_activations["attention_head"][layer_index]) <= head_index:
+                    average_bm1_activations["attention_head"][layer_index].append(None)
+                head_activation = output[:, :, head_index].mean(dim=1).detach().clone()
+                average_bm1_activations["attention_head"][layer_index][head_index] = head_activation
+            else:
+                # Store average activation for the entire layer
+                average_bm1_activations["layer"].append(output.mean(dim=1).detach().clone())
+
+    num_heads = model.config.num_attention_heads
+    
+    # Register hooks for all layers
+    for layer_index, layer in enumerate(model.transformer.h):
+        # Collect layer-wide activations
+        layer.register_forward_hook(lambda m, i, o, li=layer_index: collect_activations_hook(m, i, o, layer_index=li))
+        
+        # Collect attention head activations
+        attention_module = model.transformer.h[layer_index].attn        
+        for head_index in range(num_heads):
+            attention_module.register_forward_hook(lambda m, i, o, li=layer_index, hi=head_index:
+                                                       collect_activations_hook(m, i, o, layer_index=li, head_index=hi))
+        
+        # Collect MLP activations by averaging the MLP output directly
+        def collect_mlp_output(module, input, output, li=layer_index):
+            mlp_activation = output.mean(dim=1).detach().clone()
+            average_bm1_activations["mlp"].append(mlp_activation)
+        
+        layer.mlp.register_forward_hook(collect_mlp_output)
+    
+    # Run forward pass to collect all average activations
+    model(**inputs)
 
 
-    target_module = model.transformer.h[layer_index].attn
-    hook_handle = target_module.register_forward_hook(hook_fn)
-
-    output_inference_text_with_hook(tokenizer, model, inputs)
-
-    hook_handle.remove()
-
-
-def ablate_bm1_mlp(tokenizer, model, layer_index): 
-
+# Function to ablate using pre-collected average activations
+def ablate_bm1(tokenizer, model, node_type="layer", layer_index=0, head_index=None):
     inputs = generate_inputs_from_prompt(tokenizer)
-
-    output_inference_text_no_hook(tokenizer, model, inputs)
-
-
-    # Define the hook function for the MLP layer
-    def hook_fn(module, input, output):
-        # Modify the output tensor
-        modified_output = output * 0  # Example: Zeroing out the MLP output
-        return modified_output
-
-
-    # Choose the target module (MLP layer of the first transformer block)
-    target_module = model.transformer.h[layer_index].mlp
-    hook_handle = target_module.register_forward_hook(hook_fn)
-
+    
+    # Ablation hook that uses pre-stored average values
+    def ablation_hook(module, input, output):
+        if isinstance(output, tuple):
+            output = output[0]
+        
+        # Replace output with average activation depending on node type
+        if node_type == "attention_head" and head_index is not None:
+            output[:, :, head_index] = average_bm1_activations["attention_head"][layer_index][head_index]
+        elif node_type == "mlp":
+            output[:] = average_bm1_activations["mlp"][layer_index]
+        elif node_type == "layer":
+            output[:] = average_bm1_activations["layer"][layer_index]
+    
+    # Register ablation hook
+    layer = model.transformer.h[layer_index]
+    ablation_hook = layer.register_forward_hook(ablation_hook)
+    
+    # Generate text with ablated nodes
     output_inference_text_with_hook(tokenizer, model, inputs)
-
-    hook_handle.remove()  
-
-
-def ablate_bm1_head(cfg, tokenizer, model, layer_index, head_index): 
-
-    inputs = generate_inputs_from_prompt(tokenizer)
-
-    output_inference_text_no_hook(tokenizer, model, inputs)
-
-
-    # Define the hook function
-    def hook_fn(module, input, output):
-        # output[0] is the attention output
-        # output[0] shape: (batch_size, seq_length, hidden_size)
-        # We need to manipulate the attention scores before they are combined
-
-        # Access the attention scores before combining heads
-        # In GPT-Neo, this is a bit involved because the attention heads are merged
-        # We'll need to modify the internals of the attention module
-
-        # However, since the output is after combining heads, we can attempt to modify the output
-        # corresponding to the specific head
-
-        # Unfortunately, PyTorch hooks do not provide direct access to internal variables like attention weights
-        # So we need to modify the attention module to expose these variables, or use a custom forward method
-
-        # Modify the query, key, and value weights of the specific head
-        with torch.no_grad():
-            head_size = len(output[0]) // cfg.n_heads
-            start = head_index * head_size
-            end = start + head_size
-
-            # Zero out the output for the specific head
-            output[0][:, :, start:end] = 0
-
-        return output
-
-
-    attention_module = model.transformer.h[layer_index].attn
-    hook_handle = attention_module.register_forward_hook(hook_fn)
-
-    output_inference_text_with_hook(tokenizer, model, inputs)
-
-    hook_handle.remove()
+    
+    # Remove the ablation hook after use
+    ablation_hook.remove()
