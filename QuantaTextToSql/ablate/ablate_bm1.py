@@ -3,7 +3,7 @@ from QuantaTextToSql.training_data import generate_cs1
 
 
 def generate_inputs_from_prompt(tokenizer, prompt_text="Once upon a time, in a small village, there was a"):
-    inputs = tokenizer(prompt_text, return_tensors="pt")
+    inputs = tokenizer(prompt_text, padding=True, return_tensors="pt")  # Pad to ensure matching dimensions
     return inputs
 
 def generate_inputs_from_BatchItem(tokenizer, batch_item):
@@ -57,7 +57,7 @@ average_bm1_activations = {
 # Function to collect average activations for all heads, MLPs, and layers
 def collect_bm1_activations(model, tokenizer):
     #inputs = generate_inputs_from_prompt(tokenizer)
-    batch_items = generate_cs1(100)
+    batch_items = generate_cs1(317)
     inputs = generate_inputs_from_BatchItems(tokenizer, batch_items)
 
     # Hook to collect average activations
@@ -93,8 +93,9 @@ def collect_bm1_activations(model, tokenizer):
         
         # Collect MLP activations by averaging the MLP output directly
         def collect_mlp_output(module, input, output, li=layer_index):
-            mlp_activation = output.mean(dim=1).detach().clone()
+            mlp_activation = output.mean(dim=0).detach().clone()
             average_bm1_activations["mlp"].append(mlp_activation)
+
         
         layer.mlp.register_forward_hook(collect_mlp_output)
     
@@ -115,9 +116,24 @@ def ablate_bm1(tokenizer, model, node_type="layer", layer_index=0, head_index=No
         if node_type == "head" and head_index is not None:
             output[:, :, head_index] = average_bm1_activations["head"][layer_index][head_index]
         elif node_type == "mlp":
-            output[:] = average_bm1_activations["mlp"][layer_index]
+            # Adjust stored MLP activation to match `output`'s sequence length
+            the_activation = average_bm1_activations["mlp"][layer_index].clone()
+            the_activation = the_activation.unsqueeze(0) 
+ 
+            # Not sure why we need to do this to reduce dim1 from 191 to 13
+            if the_activation.size(1) != output.size(1):
+               the_activation = the_activation[:, :output.size(1), :]
+            
+            output[:] = the_activation
         elif node_type == "layer":
-            output[:] = average_bm1_activations["layer"][layer_index]
+            the_activation = average_bm1_activations["layer"][layer_index].clone()
+            the_activation = the_activation.unsqueeze(0) 
+
+            # Not sure why we need to do this to reduce dim1 from 317 to 13
+            if the_activation.size(1) != output.size(1):
+               the_activation = the_activation[:, :output.size(1), :]
+
+            output[:] = the_activation
     
     # Register ablation hook
     layer = model.transformer.h[layer_index]
