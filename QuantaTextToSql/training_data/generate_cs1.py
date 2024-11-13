@@ -85,19 +85,43 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12):
     return batch
 
 
+# Reduce score if the answer contains words we do not recognize
 def evaluate_unrecognised_words(recognized_words, test_tokens):
     unrecognized_words = [token for token in test_tokens if token not in recognized_words]
-    total_points = 5
+    total_points = 10
     if len(unrecognized_words) == 0:
-        points_earned = 5
+        points_earned = 10
     elif len(unrecognized_words) == 1:     
-        points_earned = 4
+        points_earned = 8
     elif len(unrecognized_words) == 2:     
-        points_earned = 3
+        points_earned = 6
     elif len(unrecognized_words) <= 4:     
-        points_earned = 2
+        points_earned = 4
     elif len(unrecognized_words) <= 8:     
-        points_earned = 1
+        points_earned = 2
+    else:     
+        points_earned = 0
+
+    return (points_earned, total_points)
+
+
+# Reduce score if the answer is much longer than the ground-truth answer. This covers duplicated text and verbose answers. 
+def evaluate_answer_length(item: BatchItem, predicted_sql_statement: str):
+    good_length = len(item.sql_statement)
+    test_length = len(predicted_sql_statement)
+    verbose_chars = max(0, test_length - good_length)
+
+    total_points = 10
+    if verbose_chars <= 2:
+        points_earned = 10
+    elif verbose_chars <= 4:     
+        points_earned = 8
+    elif verbose_chars <= 6:     
+        points_earned = 6
+    elif verbose_chars <= 8:     
+        points_earned = 4
+    elif verbose_chars <= 10:     
+        points_earned = 2
     else:     
         points_earned = 0
 
@@ -112,6 +136,7 @@ def evaluate_cs1_prediction_score_part1(item: BatchItem, predicted_sql_statement
     # - Contains table_name                 1 point
     # - Contains FROM                       1 point
     # - First word is SELECT                1 point
+    # - Answer length is reasonable         10 points
 
     total_points = 0 
     points_earned = 0
@@ -140,6 +165,11 @@ def evaluate_cs1_prediction_score_part1(item: BatchItem, predicted_sql_statement
     if len(tokens_upper) > 0 and tokens_upper[0] == 'SELECT':
         points_earned += 1
 
+    # Criterion: Answer length is reasonable
+    (earned, possible) = evaluate_answer_length(item, predicted_sql_statement)
+    total_points += possible
+    points_earned += earned
+    
     return (points_earned, total_points)
 
 
@@ -150,7 +180,7 @@ def evaluate_cs1_prediction_score_part2(item: BatchItem, predicted_sql_statement
     # - All field names are after SELECT    N points
     # - Word FROM is after all field names  1 point
     # - Word table_name is after FROM       1 point   
-    # - There are no unrecognized words     5 point
+    # - There are no unrecognized words     10 point
 
     total_points = 0  
     points_earned = 0
@@ -200,7 +230,7 @@ def evaluate_cs1_prediction_score_part2(item: BatchItem, predicted_sql_statement
     (earned, possible) = evaluate_unrecognised_words(recognized_words, test_tokens)
     total_points += possible
     points_earned += earned
- 
+
     return (points_earned, total_points)
 
 

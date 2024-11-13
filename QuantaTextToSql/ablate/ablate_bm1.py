@@ -1,4 +1,7 @@
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
+
+from QuantaTextToSql.training_data import generate_cs1
 
 
 def generate_inputs_from_prompt(tokenizer, prompt_text="Once upon a time, in a small village, there was a"):
@@ -11,10 +14,18 @@ def generate_inputs_from_BatchItem(tokenizer, batch_item):
     return inputs
 
 def generate_inputs_from_BatchItems(tokenizer, batch_items):
-    inputs = []
-    for batch_item in batch_items:
-        inputs.append(generate_inputs_from_BatchItem(tokenizer, batch_item))
-    return inputs
+    # Ensure the tokenizer has a pad_token
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token  # or you can add a custom pad token
+
+    # Collect all prompt texts
+    prompt_texts = [batch_item.get_alpaca_prompt() for batch_item in batch_items]
+    
+    # Tokenize with padding to the longest sequence
+    batched_inputs = tokenizer(prompt_texts, padding=True, return_tensors="pt")
+
+    return batched_inputs
+
 
 
 def output_inference_text(tokenizer, title, outputs):
@@ -47,7 +58,9 @@ average_bm1_activations = {
 
 # Function to collect average activations for all heads, MLPs, and layers
 def collect_bm1_activations(model, tokenizer):
-    inputs = generate_inputs_from_prompt(tokenizer)
+    #inputs = generate_inputs_from_prompt(tokenizer)
+    batch_items = generate_cs1(100)
+    inputs = generate_inputs_from_BatchItems(tokenizer, batch_items)
 
     # Hook to collect average activations
     def collect_activations_hook(module, input, output, layer_index=None, head_index=None):
