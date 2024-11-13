@@ -49,7 +49,7 @@ class TestCommandSet2(unittest.TestCase):
             accuracy = evaluate_cs2_prediction(answer[i], prediction) 
             max_accuracy = self.include_prediction(i, prediction, accuracy, threshold, max_accuracy)
 
-        print("test_generate_cs2_unrecognized_words: Max Accuracy:", max_accuracy)
+        print(f"Max Accuracy: {max_accuracy:.2f}")
 
     # Duplicated good text should score less than 100% as it is unnecessarily verbose
     def test_generate_cs2_duplicate(self):
@@ -64,4 +64,5 @@ class TestCommandSet2(unittest.TestCase):
             accuracy = evaluate_cs2_prediction(answer[i], prediction) 
             max_accuracy = self.include_prediction(i, prediction, accuracy, threshold, max_accuracy)
 
-        print("test_generate_cs2_duplicate: Max Accuracy:", max_accuracy)            
+        print(f"Max Accuracy: {max_accuracy:.2f}")
+     

@@ -1,6 +1,4 @@
-import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-
 from QuantaTextToSql.training_data import generate_cs1
 
 
@@ -50,9 +48,9 @@ def load_bm1():
 
 # Dictionary to store average activations for all layers, heads, and MLPs
 average_bm1_activations = {
-    "attention_head": {},  # Dict of layer -> list of average activations per head
-    "mlp": [],             # List of MLP average activations
-    "layer": []            # List of layer average activations
+    "head": {},  # Dict of layer -> list of average activations per head
+    "mlp": [],   # List of MLP average activations
+    "layer": []  # List of layer average activations
 }
 
 
@@ -70,12 +68,12 @@ def collect_bm1_activations(model, tokenizer):
         if layer_index is not None:
             if head_index is not None:
                 # Store average activation for a specific attention head
-                if layer_index not in average_bm1_activations["attention_head"]:
-                    average_bm1_activations["attention_head"][layer_index] = []
-                while len(average_bm1_activations["attention_head"][layer_index]) <= head_index:
-                    average_bm1_activations["attention_head"][layer_index].append(None)
+                if layer_index not in average_bm1_activations["head"]:
+                    average_bm1_activations["head"][layer_index] = []
+                while len(average_bm1_activations["head"][layer_index]) <= head_index:
+                    average_bm1_activations["head"][layer_index].append(None)
                 head_activation = output[:, :, head_index].mean(dim=1).detach().clone()
-                average_bm1_activations["attention_head"][layer_index][head_index] = head_activation
+                average_bm1_activations["head"][layer_index][head_index] = head_activation
             else:
                 # Store average activation for the entire layer
                 average_bm1_activations["layer"].append(output.mean(dim=1).detach().clone())
@@ -114,8 +112,8 @@ def ablate_bm1(tokenizer, model, node_type="layer", layer_index=0, head_index=No
             output = output[0]
         
         # Replace output with average activation depending on node type
-        if node_type == "attention_head" and head_index is not None:
-            output[:, :, head_index] = average_bm1_activations["attention_head"][layer_index][head_index]
+        if node_type == "head" and head_index is not None:
+            output[:, :, head_index] = average_bm1_activations["head"][layer_index][head_index]
         elif node_type == "mlp":
             output[:] = average_bm1_activations["mlp"][layer_index]
         elif node_type == "layer":

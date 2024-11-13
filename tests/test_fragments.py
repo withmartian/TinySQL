@@ -45,10 +45,10 @@ class TestFragments(unittest.TestCase):
         a = get_english_aggregate_count()
         o = get_english_order_by_count()
 
-        print( "Table name count:", t)
-        print( "Field name count:", f)
-        print( "English select phrases count:", s)
-        print( "English aggregate phrases count:", a)
-        print( "English order by phrases count:", o)
-        print( "Product:", t*f*s*a*o)
+        #print( "Table name count:", t)
+        #print( "Field name count:", f)
+        #print( "English select phrases count:", s)
+        #print( "English aggregate phrases count:", a)
+        #print( "English order by phrases count:", o)
+        print( "Product of fragment counts:", t*f*s*a*o)
         
