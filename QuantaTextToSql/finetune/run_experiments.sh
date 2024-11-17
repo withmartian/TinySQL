@@ -31,7 +31,7 @@ weight_decay=0.01
 learning_rates=(1e-5)
 
 # Insert your Hugging Face API token here
-export HF_TOKEN="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"
+export HF_TOKEN="YOUR_HF_TOKEN"
 
 # accelerate config
 #export ACCELERATE_DISTRIBUTED_TYPE="MULTI_GPU"
