@@ -59,4 +59,11 @@ class BatchItem:
             print( "Order by:", self.order_by )
         print( "English:", self.english_prompt )
         print( "SQL:", self.sql_statement )
-    
+
+    def get_alpaca_prompt(self):
+        alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
+
+        # Substitute the english_prompt and create_statement into the alpaca_prompt
+        alpaca_prompt = alpaca_prompt.format(self.english_prompt, self.create_statement)
+
+        return alpaca_prompt

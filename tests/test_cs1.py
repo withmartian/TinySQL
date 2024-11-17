@@ -7,13 +7,11 @@ from QuantaTextToSql.training_data import get_sql_create_table, get_sql_select_f
 # Refer https://docs.google.com/document/d/1HZMqWJA5qw8TFhyk8j3WB573ec-8bKMdrE4TnV4-qgc/
 class TestCommandSet1(unittest.TestCase):
 
-
     def test_create_table(self):
 
         (_, _, create_statement) = get_sql_create_table(3, 9)
 
-        print("Sample Create:", create_statement)
-
+        #print("Sample Create:", create_statement)
 
     def test_select_from(self):
      
@@ -21,8 +19,7 @@ class TestCommandSet1(unittest.TestCase):
 
         (_, sql_select_statement) = get_sql_select_from(table_name, table_fields, False)
 
-        print("Sample Select:", sql_select_statement)
-     
+        #print("Sample Select:", sql_select_statement)
     
     def test_get_english_select_from(self): 
 
@@ -32,27 +29,64 @@ class TestCommandSet1(unittest.TestCase):
 
         english_select_from = get_english_select_from(table_name, select_fields)
 
-        print( "English select:", english_select_from )
+        #print( "English select:", english_select_from )
 
-
-    def test_generate_cs1(self):
+    # The "ground truth" should score 100%  
+    def test_generate_cs1_ground_truth(self):
             
         batch_size = 3000
-        answer = generate_cs1(batch_size)
-        
+        answer = generate_cs1(batch_size) 
         for i in range(batch_size):
 
-            accuracy = evaluate_cs1_prediction(answer[i], answer[i].sql_statement)
-
-            if(i == 4) or (accuracy < 1):
-                print("Command set:", answer[i].command_set)                
-                print("Context:", answer[i].create_statement)
-                print("Prompt:", answer[i].english_prompt)
-                print("SQL:", answer[i].sql_statement)
-                print("Accuracy:", accuracy)
-
+            prediction = answer[i].sql_statement
+            accuracy = evaluate_cs1_prediction(answer[i], prediction)
             if accuracy < 1:
-                accuracy = evaluate_cs1_prediction(answer[i], answer[i].sql_statement)
-
-            # The "ground truth" should score 100%              
+                print("Example:", i)                
+                print("Prediction", prediction)
+                print("Accuracy:", accuracy)      
             assert(accuracy == 1)
+
+    def include_prediction(self, i, prediction, accuracy, threshold, max_accuracy):
+        if accuracy >= threshold:        
+            print("Example:", i)                
+            print("Prediction", prediction)
+            print("Accuracy:", accuracy)
+            assert(False)
+
+        return max( accuracy, max_accuracy )
+    
+    # Unrecognized words should score less than 100%
+    def test_generate_cs1_unrecognized_words(self):
+        threshold = 0.9
+        max_accuracy = 0.0
+            
+        batch_size = 1000
+        answer = generate_cs1(batch_size)  
+        for i in range(batch_size):
+
+            unrecognized_words = " I must not fear. Fear is the mind-killer. "
+
+            prediction = answer[i].sql_statement + unrecognized_words
+            accuracy = evaluate_cs1_prediction(answer[i], prediction) 
+            max_accuracy = self.include_prediction(i, prediction, accuracy, threshold, max_accuracy)
+
+            prediction = unrecognized_words + answer[i].sql_statement
+            accuracy = evaluate_cs1_prediction(answer[i], prediction) 
+            max_accuracy = self.include_prediction(i, prediction, accuracy, threshold, max_accuracy)
+
+        print(f"Max Accuracy: {max_accuracy:.2f}")
+
+    # Duplicated good text should score less than 100% as it is unnecessarily verbose
+    def test_generate_cs1_duplicate(self):
+        threshold = 0.9
+        max_accuracy = 0.0
+
+        batch_size = 1000
+        answer = generate_cs1(batch_size)  
+        for i in range(batch_size):
+
+            prediction = answer[i].sql_statement + " " + answer[i].sql_statement
+            accuracy = evaluate_cs1_prediction(answer[i], prediction) 
+            max_accuracy = self.include_prediction(i, prediction, accuracy, threshold, max_accuracy)
+
+        print(f"Max Accuracy: {max_accuracy:.2f}")
