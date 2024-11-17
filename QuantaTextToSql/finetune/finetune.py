@@ -34,7 +34,7 @@ def parse_args():
     # Model and training arguments
     parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.2-1B-Instruct", help="Model name or path")
     parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate for fine-tuning")
-    parser.add_argument("--num_train_epochs", type=int, default=.25, help="Number of epochs")
+    parser.add_argument("--num_train_epochs", type=int, default=1, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size per device")
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Number of gradient accumulation steps")
     parser.add_argument("--warmup_steps", type=int, default=0, help="Number of warmup steps")
@@ -325,8 +325,12 @@ def main():
             torch_dtype=torch.float32,
             device_map="auto",
         )
-        eval_batch_size = 256
-        tokenizer.pad_token = tokenizer.eos_token
+        eval_batch_size = 512
+        #tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
+        model.resize_token_embeddings(len(tokenizer))
+        model.config.pad_token_id = tokenizer.pad_token_id
+        model.resize_token_embeddings(len(tokenizer))
 
     # Preprocess the dataset
     alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
@@ -373,9 +377,9 @@ def main():
         }
 
     # Preprocess the datasets
-    train_dataset_processed = train_dataset.map(preprocess_function, batched=True, remove_columns=train_dataset.column_names)
+    train_dataset_processed = train_dataset.map(preprocess_function, batched=True, remove_columns=train_dataset.column_names, desc="Preprocessing train dataset")
     train_dataset_processed.set_format(type='torch')
-    val_dataset_processed = val_dataset.map(preprocess_function, batched=True, remove_columns=val_dataset.column_names)
+    val_dataset_processed = val_dataset.map(preprocess_function, batched=True, remove_columns=val_dataset.column_names, desc="Preprocessing validation dataset")
     val_dataset_processed.set_format(type='torch')
 
     # Calculate the number of training steps, evaluation steps and effective batch size 
