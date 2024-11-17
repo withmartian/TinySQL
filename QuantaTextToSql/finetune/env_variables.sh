@@ -1,5 +1,5 @@
 # huggingface
-export HF_TOKEN="YOUR_HUGGINGFACE_TOKEN"
+export HF_TOKEN="YOUR_HF_TOKEN"
 
 # transformers
 export TOKENIZERS_PARALLELISM=false
@@ -14,3 +14,4 @@ export ACCELERATE_MULTI_GPU_BACKEND="gloo"
 
 
 # wandb disabled
+wandb disable
