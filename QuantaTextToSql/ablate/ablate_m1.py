@@ -122,4 +122,4 @@ def ablated_m1_inference(tokenizer, model, cached_avg_activations, batched_input
     
     ablation_hook.remove()
 
-    return (outputs, generated_text.strip())
+    return (outputs, generated_text)
