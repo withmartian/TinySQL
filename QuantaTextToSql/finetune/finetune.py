@@ -30,11 +30,11 @@ MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2-0
 
 # Argument parsing
 def parse_args():
-    parser = argparse.ArgumentParser(description="Simple Fine-tuning Script for SQL Interp")
+    parser = argparse.ArgumentParser(description="Fine-tuning, Evaluation, and Interactive Script for SQL Interp")
     # Model and training arguments
     parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.2-1B-Instruct", help="Model name or path")
     parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate for fine-tuning")
-    parser.add_argument("--num_train_epochs", type=int, default=1, help="Number of epochs")
+    parser.add_argument("--num_train_epochs", type=float, default=1, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=8, help="Batch size per device")
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Number of gradient accumulation steps")
     parser.add_argument("--warmup_steps", type=int, default=0, help="Number of warmup steps")
@@ -53,6 +53,15 @@ def parse_args():
     parser.add_argument("--wandb_run_name", type=str, default="debug", help="W&B run name")
     parser.add_argument("--wandb_entity", type=str, default="dhruv-gretel", help="W&B entity name")
     parser.add_argument("--wandb_organization", type=str, default="dhruvnathawani", help="W&B organization name")
+
+    # Modes are mutually exclusive, set either one of evaluate, interactive, or finetune
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument("--evaluate", action="store_true", help="Evaluate the model on the test set")
+    mode_group.add_argument("--interactive", action="store_true", help="Run the model in interactive mode")
+    mode_group.add_argument("--finetune", action="store_true", help="Fine-tune the model (default behavior)")
+
+    # Device
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use")
 
     # Debugging
     parser.add_argument("--debug", action="store_true", help="Debug mode")
@@ -100,7 +109,6 @@ class EvaluationCallback(TrainerCallback):
             self.evaluate_cs_function, self.dataset_type, self.batch_size,
             step=state.global_step
         )
-
 
 def evaluate(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_function, dataset_type="validation", batch_size=1, step=0):
     model.eval()
@@ -215,53 +223,50 @@ def evaluate(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_functio
         }
     )
 
-def evaluate_single_batch(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_function, dataset_type="validation", batch_size=1, step=0):
-    model.eval()
-    total_predictions = 0
-    correct_predictions = 0
-    evaluation_score_sum = 0.0
-    gt_score_sum = 0.0
-    tokenizer.padding_side = "left"
-    for i in tqdm(range(0, len(dataset), batch_size), desc=f"Evaluating {dataset_type} set on step {step}"):
-        batch = dataset[i]
-        text_generation = pipeline("text-generation", model=model, tokenizer=tokenizer)
-        prompt = alpaca_prompt.format(batch["english_prompt"], batch["create_statement"])
+def interactive_mode(args, alpaca_prompt, model, tokenizer):
+    print("Running in interactive mode. Type 'exit' to quit.")
 
-        # Test the model
-        output_text = text_generation(prompt, max_new_tokens=100, temperature=0.5, top_p=0.9)[0]["generated_text"]
-        predicted_sql = output_text[len(prompt):]
-        item = dict_to_batchitem(batch)
-        prediction_score = evaluate_cs_function(item, predicted_sql)
-        label_score = evaluate_cs_function(item, item.sql_statement)
-        if prediction_score == 1.00:
-            correct_predictions += 1
-        else:
-            # Print the incorrect predictions
-            print("--------------------------------------------------")
-            print(f"Instruction {i}:\n{batch['english_prompt']}\n")
-            print(f"Context {i}:\n{batch['create_statement']}\n")
-            print(f"Ground Truth SQL {i}:\n{batch['sql_statement']}\n")
-            print(f"Predicted SQL {i}:\n{predicted_sql}\n")
-            print("--------------------------------------------------")
-        total_predictions += 1
-        evaluation_score_sum += prediction_score
-        gt_score_sum += label_score
-    # print percentages with 3 decimal places
-    accuracy = (correct_predictions/total_predictions) * 100
-    evaluation_score = (evaluation_score_sum / total_predictions) * 100
-    gt_score = (gt_score_sum / total_predictions) * 100
-
-    print(f"{dataset_type.capitalize()} Prediction Accuracy: {accuracy:.2f}%")
-    print(f"{dataset_type.capitalize()} Evaluation Score: {evaluation_score:.2f}%")
-    print(f"{dataset_type.capitalize()} Ground Truth Score: {gt_score:.2f}%")
-    # Log the scores to W&B with the dataset type
-    wandb.log(
-        {
-            f"{dataset_type.capitalize()} Prediction Accuracy": accuracy,
-            f"{dataset_type.capitalize()} Prediction Accuracy": evaluation_score,
-            f"{dataset_type.capitalize()} Ground Truth Accuracy": gt_score,
-        }
+    # Initialize the text generation pipeline
+    text_generator = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        # Adjust parameters as needed
+        # For example, to enable streaming, you can set parameters here
     )
+
+    while True:
+        try:
+            instruction = input("Instruction (type 'exit' to quit): ")
+            if instruction.lower() == 'exit':
+                break
+            context = input("Context: ")
+
+            prompt = alpaca_prompt.format(instruction, context)
+
+            # Generate the response
+            response = text_generator(
+                prompt,
+                max_new_tokens=100,
+                temperature=0.7,
+                top_p=0.9,
+                do_sample=True,
+                early_stopping=True,
+            )
+
+            # Extract the generated text
+            generated_text = response[0]['generated_text'][len(prompt):].strip()
+
+            print("Response:")
+            print(generated_text)
+            print("\n")
+
+        except KeyboardInterrupt:
+            print("\nExiting.")
+            break
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            break
 
 def main():
     # Parse the arguments
@@ -276,11 +281,12 @@ def main():
 
     # Set the seed for reproducibility
     set_seed(seed)
-    print("Random seed for this training run is:", seed)
+    print("Random seed for this run is:", seed)
     
-    # Initialize wandb
-    wandb.init(project=args.wandb_project, name=args.wandb_run_name, entity=args.wandb_entity)
-    wandb.config.update({'seed': seed}, allow_val_change=True)
+    # Initialize wandb if in finetune or evaluate mode
+    if args.finetune or args.evaluate:
+        wandb.init(project=args.wandb_project, name=args.wandb_run_name, entity=args.wandb_entity)
+        wandb.config.update({'seed': seed}, allow_val_change=True)
     
     # Load HF token from environment variable
     hf_token = os.environ.get("HF_TOKEN")
@@ -295,18 +301,15 @@ def main():
     elif "withmartian/cs3_dataset" in args.dataset_name:
         evaluate_cs_function = evaluate_cs3_prediction
     else:
-        raise ValueError("Invalid dataset name, this script is only for training with SQL-interp datasets!")
+        raise ValueError("Invalid dataset name, this script is only for SQL-interp datasets!")
 
-    # Load dataset and tokenizer
-    train_dataset = load_dataset(args.dataset_name, split="train")
-    val_dataset = load_dataset(args.dataset_name, split="validation")
-    test_dataset = load_dataset(args.dataset_name, split="test")
+    # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
-    # Load model and set padding, flash_attn and eval_batch_size 
+    # Load model and set padding, flash_attn and eval_batch_size
     # (currently supports only llama, qwen and tinystories)
     if args.model_name in MODELS_WITH_FLASH_ATTENTION:
-        # qwen model and llama model
+        # qwen model and llama model with flash attention
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=torch.bfloat16,
@@ -316,170 +319,201 @@ def main():
         if args.model_name == "meta-llama/Llama-3.2-1B-Instruct":
             tokenizer.pad_token = "<|finetune_right_pad_id|>"
             model.config.pad_token_id = tokenizer.pad_token_id
-            #tokenizer.padding_side = 'right'
+            #tokenizer.padding_side = "right"
         eval_batch_size = 1024
     else:
-        # tiny-stories model
+        # tiny-stories model without flash attention
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=torch.float32,
             device_map="auto",
         )
         eval_batch_size = 256
-        #tokenizer.pad_token = tokenizer.eos_token
         tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
         model.resize_token_embeddings(len(tokenizer))
         model.config.pad_token_id = tokenizer.pad_token_id
         model.resize_token_embeddings(len(tokenizer))
 
-    # Preprocess the dataset
+    # Use the alpaca prompt
     alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
-    def preprocess_function(examples):
-        prompts = [
-            alpaca_prompt.format(instruction, context)
-            for instruction, context in zip(
-                examples["english_prompt"], examples["create_statement"]
-            )
-        ]
-        responses = [sql + tokenizer.eos_token for sql in examples["sql_statement"]]
-        prompt_encodings = tokenizer(prompts, truncation=True, max_length=args.max_seq_length, add_special_tokens=True,)
-        # BUG: tokenizer truncates the response to max_length, but we want to truncate the prompt instead
-        response_encodings = tokenizer(responses, truncation=True, max_length=args.max_seq_length, add_special_tokens=False,)
 
-        input_ids_list = []
-        labels_list = []
-        attention_mask_list = []
+    if args.interactive:
+        # Interactive mode
+        interactive_mode(args, alpaca_prompt, model, tokenizer)
+        return
 
-        for prompt_ids, response_ids in zip(prompt_encodings["input_ids"], response_encodings["input_ids"]):
-            total_length = len(prompt_ids) + len(response_ids)
-            if total_length > args.max_seq_length:
-                overflow = total_length - args.max_seq_length
-                prompt_ids = prompt_ids[:-overflow]
-
-            input_ids = prompt_ids + response_ids
-            labels = [-100] * len(prompt_ids) + response_ids
-            attention_mask = [1] * len(input_ids)
-
-            padding_length = args.max_seq_length - len(input_ids)
-
-            # left sided padding
-            input_ids += [tokenizer.pad_token_id] * padding_length
-            labels += [-100] * padding_length
-            attention_mask += [0] * padding_length
-
-            input_ids_list.append(input_ids)
-            labels_list.append(labels)
-            attention_mask_list.append(attention_mask)
-        return {
-            "input_ids": input_ids_list,
-            "labels": labels_list,
-            "attention_mask": attention_mask_list,
-        }
-
-    # Preprocess the datasets
-    train_dataset_processed = train_dataset.map(preprocess_function, batched=True, remove_columns=train_dataset.column_names, desc="Preprocessing train dataset")
-    train_dataset_processed.set_format(type='torch')
-    val_dataset_processed = val_dataset.map(preprocess_function, batched=True, remove_columns=val_dataset.column_names, desc="Preprocessing validation dataset")
-    val_dataset_processed.set_format(type='torch')
-
-    # Calculate the number of training steps, evaluation steps and effective batch size 
-    num_training_examples = len(train_dataset_processed)
-    num_devices = torch.cuda.device_count() if torch.cuda.is_available() else 1
-    effective_batch_size = (args.batch_size * args.gradient_accumulation_steps)  # * num_devices
-    steps_per_epoch = max(1, num_training_examples // effective_batch_size)
-    eval_steps = steps_per_epoch // 8
-    save_steps = steps_per_epoch // 2
-    print(f"Steps per epoch: {steps_per_epoch}, Eval steps: {eval_steps}")
-
-    # Training arguments
-    training_args = TrainingArguments(
-        # Output and Logging Parameters
-        output_dir=args.output_dir,
-        logging_dir=f"{args.output_dir}/logs",
-        logging_steps=1,
-        save_steps=save_steps,
-        report_to="wandb",
-
-        # Training Parameters
-        num_train_epochs=args.num_train_epochs,
-        per_device_train_batch_size=args.batch_size,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
-        learning_rate=args.learning_rate,
-        weight_decay=args.weight_decay,
-        warmup_steps=args.warmup_steps,
-        optim="adamw_torch",
-        seed=args.seed,
-
-        # Evaluation Parameters
-        eval_strategy="steps",
-        eval_steps=eval_steps,
-    )
-
-    # Initialize the trainer
-    trainer = SFTTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset_processed,
-        eval_dataset=val_dataset_processed,
-        tokenizer=tokenizer,
-        max_seq_length=args.max_seq_length,
-    )
-
-    # Add evaluation callback to the trainer for validation
-    evaluation_callback = EvaluationCallback(
+    if args.evaluate:
+        # Evaluation mode
+        # Load test dataset
+        test_dataset = load_dataset(args.dataset_name, split="test")
+        evaluate(
             args=args,
-            evaluate_fn=evaluate,
-            trainer=trainer,
-            dataset=val_dataset,
+            dataset=test_dataset,
             model=model,
             tokenizer=tokenizer,
             alpaca_prompt=alpaca_prompt,
-            max_seq_length=args.max_seq_length,
             evaluate_cs_function=evaluate_cs_function,
-            dataset_type="validation",
+            dataset_type="test",
             batch_size=eval_batch_size,
-    )
-    trainer.add_callback(evaluation_callback)
+            step=0,
+        )
+        wandb.finish()
+        return
 
-    # Evaluate on the test set before training
-    evaluate(
-        args=args,
-        dataset=test_dataset,
-        model=model,
-        tokenizer=tokenizer,
-        alpaca_prompt=alpaca_prompt,
-        evaluate_cs_function=evaluate_cs_function,
-        dataset_type="test",
-        batch_size=eval_batch_size,
-        step=trainer.state.global_step,
-    )
+    # Fine-tuning mode
+    if args.finetune:
+        # Load datasets
+        train_dataset = load_dataset(args.dataset_name, split="train")
+        val_dataset = load_dataset(args.dataset_name, split="validation")
+        test_dataset = load_dataset(args.dataset_name, split="test")
 
-    # Train the model and evaluate on the validation set
-    trainer.evaluate()
-    trainer.train()
-    trainer.evaluate()
+        # Preprocess the dataset
+        def preprocess_function(examples):
+            prompts = [
+                alpaca_prompt.format(instruction, context)
+                for instruction, context in zip(
+                    examples["english_prompt"], examples["create_statement"]
+                )
+            ]
+            responses = [sql + tokenizer.eos_token for sql in examples["sql_statement"]]
+            prompt_encodings = tokenizer(prompts, truncation=True, max_length=args.max_seq_length, add_special_tokens=True)
+            response_encodings = tokenizer(responses, truncation=True, max_length=args.max_seq_length, add_special_tokens=False)
 
-    # Evaluate on the test set after training
-    evaluate(
-        args=args,
-        dataset=test_dataset,
-        model=model,
-        tokenizer=tokenizer,
-        alpaca_prompt=alpaca_prompt,
-        evaluate_cs_function=evaluate_cs_function,
-        dataset_type="test",
-        batch_size=eval_batch_size,
-        step=trainer.state.global_step,
-    )
-    
-    # Save the model and tokenizer locally and push to Hugging Face Hub
-    model.save_pretrained(args.output_dir)
-    tokenizer.save_pretrained(args.output_dir)
-    print(f"Model and tokenizer saved in {args.output_dir}")
-    push_model_to_hf(args.output_dir, args.wandb_run_name, args.wandb_organization)
-    
-    # Finish the W&B run
-    wandb.finish()
+            input_ids_list = []
+            labels_list = []
+            attention_mask_list = []
+
+            for prompt_ids, response_ids in zip(prompt_encodings["input_ids"], response_encodings["input_ids"]):
+                total_length = len(prompt_ids) + len(response_ids)
+                if total_length > args.max_seq_length:
+                    overflow = total_length - args.max_seq_length
+                    prompt_ids = prompt_ids[:-overflow]
+
+                input_ids = prompt_ids + response_ids
+                labels = [-100] * len(prompt_ids) + response_ids
+                attention_mask = [1] * len(input_ids)
+
+                padding_length = args.max_seq_length - len(input_ids)
+
+                # Left-sided padding
+                input_ids += [tokenizer.pad_token_id] * padding_length
+                labels += [-100] * padding_length
+                attention_mask += [0] * padding_length
+
+                input_ids_list.append(input_ids)
+                labels_list.append(labels)
+                attention_mask_list.append(attention_mask)
+            return {
+                "input_ids": input_ids_list,
+                "labels": labels_list,
+                "attention_mask": attention_mask_list,
+            }
+
+        # Preprocess the datasets
+        train_dataset_processed = train_dataset.map(preprocess_function, batched=True, remove_columns=train_dataset.column_names, desc="Preprocessing train dataset")
+        train_dataset_processed.set_format(type='torch')
+        val_dataset_processed = val_dataset.map(preprocess_function, batched=True, remove_columns=val_dataset.column_names, desc="Preprocessing validation dataset")
+        val_dataset_processed.set_format(type='torch')
+
+        # Calculate the number of training steps, evaluation steps and effective batch size
+        num_training_examples = len(train_dataset_processed)
+        num_devices = torch.cuda.device_count() if torch.cuda.is_available() else 1
+        # num_devices is 1 for now, should be updated for data parallelism
+        effective_batch_size = (args.batch_size * args.gradient_accumulation_steps)  # * num_devices
+        steps_per_epoch = max(1, num_training_examples // effective_batch_size)
+        eval_steps = steps_per_epoch // 8
+        save_steps = steps_per_epoch // 2
+        print(f"Steps per epoch: {steps_per_epoch}, Eval steps: {eval_steps}")
+
+        # Training arguments
+        training_args = TrainingArguments(
+            # Output and Logging Parameters
+            output_dir=args.output_dir,
+            logging_dir=f"{args.output_dir}/logs",
+            logging_steps=1,
+            save_steps=save_steps,
+            report_to="wandb",
+
+            # Training Parameters
+            num_train_epochs=args.num_train_epochs,
+            per_device_train_batch_size=args.batch_size,
+            gradient_accumulation_steps=args.gradient_accumulation_steps,
+            learning_rate=args.learning_rate,
+            weight_decay=args.weight_decay,
+            warmup_steps=args.warmup_steps,
+            optim="adamw_torch",
+            seed=args.seed,
+
+            # Evaluation Parameters
+            eval_strategy="steps",
+            eval_steps=eval_steps,
+        )
+
+        # Initialize the trainer
+        trainer = SFTTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset_processed,
+            eval_dataset=val_dataset_processed,
+            tokenizer=tokenizer,
+            max_seq_length=args.max_seq_length,
+        )
+
+        # Add evaluation callback to the trainer for validation
+        evaluation_callback = EvaluationCallback(
+                args=args,
+                evaluate_fn=evaluate,
+                trainer=trainer,
+                dataset=val_dataset,
+                model=model,
+                tokenizer=tokenizer,
+                alpaca_prompt=alpaca_prompt,
+                max_seq_length=args.max_seq_length,
+                evaluate_cs_function=evaluate_cs_function,
+                dataset_type="validation",
+                batch_size=eval_batch_size,
+        )
+        trainer.add_callback(evaluation_callback)
+
+        # Evaluate on the test set before training
+        evaluate(
+            args=args,
+            dataset=test_dataset,
+            model=model,
+            tokenizer=tokenizer,
+            alpaca_prompt=alpaca_prompt,
+            evaluate_cs_function=evaluate_cs_function,
+            dataset_type="test",
+            batch_size=eval_batch_size,
+            step=trainer.state.global_step,
+        )
+
+        # Train the model and evaluate on the validation set
+        trainer.evaluate()
+        trainer.train()
+        trainer.evaluate()
+
+        # Evaluate on the test set after training
+        evaluate(
+            args=args,
+            dataset=test_dataset,
+            model=model,
+            tokenizer=tokenizer,
+            alpaca_prompt=alpaca_prompt,
+            evaluate_cs_function=evaluate_cs_function,
+            dataset_type="test",
+            batch_size=eval_batch_size,
+            step=trainer.state.global_step,
+        )
+
+        # Save the model and tokenizer locally and push to Hugging Face Hub
+        model.save_pretrained(args.output_dir)
+        tokenizer.save_pretrained(args.output_dir)
+        print(f"Model and tokenizer saved in {args.output_dir}")
+        push_model_to_hf(args.output_dir, args.wandb_run_name, args.wandb_organization)
+        
+        # Finish the W&B run
+        wandb.finish()
 
 if __name__ == "__main__":
     main()
