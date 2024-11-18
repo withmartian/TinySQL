@@ -269,7 +269,7 @@ def main():
 
     # Generate a random 7-digit seed
     if args.seed is None:
-        seed = random.randrange(1000001, 10000000, 2)
+        seed = random.randrange(100007, 1000000, 10)
         args.seed = seed
     else:
         seed = args.seed
@@ -299,8 +299,8 @@ def main():
 
     # Load dataset and tokenizer
     train_dataset = load_dataset(args.dataset_name, split="train")
-    val_dataset = load_dataset(args.dataset_name, split="validation[:10%]")
-    test_dataset = load_dataset(args.dataset_name, split="test[:10%]")
+    val_dataset = load_dataset(args.dataset_name, split="validation")
+    test_dataset = load_dataset(args.dataset_name, split="test")
     tokenizer = AutoTokenizer.from_pretrained(args.model_name)
 
     # Load model and set padding, flash_attn and eval_batch_size 
@@ -325,7 +325,7 @@ def main():
             torch_dtype=torch.float32,
             device_map="auto",
         )
-        eval_batch_size = 512
+        eval_batch_size = 256
         #tokenizer.pad_token = tokenizer.eos_token
         tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
         model.resize_token_embeddings(len(tokenizer))
