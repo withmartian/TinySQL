@@ -41,4 +41,4 @@ from .generate_cs1 import (
 from .generate_cs2 import generate_cs2, evaluate_cs2_prediction
 from .generate_cs3 import generate_cs3, evaluate_cs3_prediction
 
-from .generate_utils import (output_inference_text)
+from .generate_utils import (generate_inputs_from_prompt, output_inference_text)

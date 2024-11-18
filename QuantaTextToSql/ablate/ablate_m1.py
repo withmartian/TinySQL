@@ -1,39 +1,5 @@
-import os
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
 from QuantaTextToSql.training_data.generate_utils import output_inference_text
-
-
-# Load the tokenizer and base model from Hugging Face
-def load_bm1():
-    tokenizer = AutoTokenizer.from_pretrained("roneneldan/TinyStories-Instruct-2Layers-33M")
-    model = AutoModelForCausalLM.from_pretrained("roneneldan/TinyStories-Instruct-2Layers-33M")
-    
-    # Ensure the tokenizer has a pad_token
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token 
-        
-    return tokenizer, model
-
-
-# Load the tokenizer and base model from Hugging Face
-def load_tm1():
-    auth_token = os.getenv("HF_AUTH_TOKEN")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        "withmartian/sft_sql_interp_TinyStories-33M_cs1_experiment_7.3",
-        token=auth_token
-    )
-    model = AutoModelForCausalLM.from_pretrained(
-        "withmartian/sft_sql_interp_TinyStories-33M_cs1_experiment_7.3",
-        token=auth_token
-    )
-    
-    # Ensure the tokenizer has a pad_token
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token 
-        
-    return tokenizer, model
 
 
 # Function to collect average activations for all heads, MLPs, and layers
@@ -156,4 +122,4 @@ def ablated_m1_inference(tokenizer, model, cached_avg_activations, batched_input
     
     ablation_hook.remove()
 
-    return (outputs, generated_text)
+    return (outputs, generated_text.strip())
