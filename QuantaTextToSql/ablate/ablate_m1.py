@@ -18,7 +18,7 @@ def collect_m1_activations(model, batched_inputs):
         
         if layer_index is not None:
             if head_index is not None:
-                # Store average activation for a specific attention head from output[BatchSize=100, SeqLen=183, HiddenDimension=1024]
+                # Store average activation for a specific attention head from output[BatchSize=25, SeqLen=~183, HiddenDimension=1024]
                 if layer_index not in cached_avg_activations["head"]:
                     cached_avg_activations["head"][layer_index] = []
                 while len(cached_avg_activations["head"][layer_index]) <= head_index:
@@ -59,7 +59,7 @@ def collect_m1_activations(model, batched_inputs):
 
 # Function to ablate using pre-collected average activations
 def ablated_m1_inference(tokenizer, model, cached_avg_activations, batched_inputs, 
-                         node_type="layer", layer_index=0, head_index=None, max_words=20):
+                         node_type="layer", layer_index=0, head_index=None, max_words=100):
     # Ablation hook that uses pre-stored average values
     def ablation_hook(module, input, output):
         if isinstance(output, tuple):
@@ -114,10 +114,11 @@ def ablated_m1_inference(tokenizer, model, cached_avg_activations, batched_input
         if (next_token == tokenizer.eos_token_id).all():  # Stop if all sequences in the batch hit EOS
             break
 
-    # Decode generated tokens
-    generated_text = tokenizer.decode(generated_tokens[0], skip_special_tokens=True)
+    # Decode generated tokens for all sequences in the batch
+    generated_texts = [tokenizer.decode(seq, skip_special_tokens=True) for seq in generated_tokens]
     
     ablation_hook.remove()
 
-    return generated_tokens, generated_text
+    return generated_tokens, generated_texts
+
 
