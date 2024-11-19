@@ -258,3 +258,10 @@ def evaluate_cs1_prediction(item: BatchItem, predicted_sql_statement: str) -> fl
     accuracy = 1.0 * (points_earned_part) / (total_points_part)
 
     return accuracy
+
+def evaluate_cs1_predictions(items, predicted_sql_statements) -> float:
+    total_accuracy = 0.0
+    for i, item in enumerate(items):
+        accuracy = evaluate_cs1_prediction(item, predicted_sql_statements[i])
+        total_accuracy += accuracy
+    return total_accuracy / len(items)  

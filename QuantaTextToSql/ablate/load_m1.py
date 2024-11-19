@@ -1,42 +1,35 @@
 import os
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-
-def refine_tokenizer(tokenizer):
-    # Set the padding side
-    tokenizer.padding_side = "left"
-
-    # Ensure the tokenizer has a pad_token
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token 
-
-    return tokenizer
-
-
-
-# Load the tokenizer and base model from Hugging Face
-def load_bm1():
-    tokenizer = AutoTokenizer.from_pretrained("roneneldan/TinyStories-Instruct-2Layers-33M")
-    model = AutoModelForCausalLM.from_pretrained("roneneldan/TinyStories-Instruct-2Layers-33M")
-    
-    tokenizer = refine_tokenizer(tokenizer)
-        
-    return tokenizer, model
-
-
-# Load the tokenizer and trained model from Hugging Face
+# Load the tokenizer and trained tiny-stories model from Hugging Face
 def load_bm1_from_hf(hf_location):
     auth_token = os.getenv("HF_TOKEN")
 
     tokenizer = AutoTokenizer.from_pretrained(hf_location, token=auth_token)
-    model = AutoModelForCausalLM.from_pretrained(hf_location, token=auth_token)
-    
-    tokenizer = refine_tokenizer(tokenizer)
+   
+    # model without flash attention
+    model = AutoModelForCausalLM.from_pretrained(
+            hf_location,
+            torch_dtype=torch.float32,
+            device_map="auto",
+        )
+        
+    tokenizer.padding_side = "left"
+    tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
+
+    model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
+
+    model.config.pad_token_id = tokenizer.pad_token_id
+
+    model.resize_token_embeddings(len(tokenizer))
         
     return tokenizer, model
 
 
-# Load the tokenizer and trained model from Hugging Face
+def load_bm1():
+    return load_bm1_from_hf("roneneldan/TinyStories-Instruct-2Layers-33M")
+
 def load_bm1_cs1():
     return load_bm1_from_hf("withmartian/sql_interp_bm1_cs1_experiment_1.1")
 

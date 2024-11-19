@@ -36,7 +36,8 @@ from .sql_order_by import get_sql_order_by
 from .generate_cs1 import (
     get_english_select_from,
     generate_cs1,
-    evaluate_cs1_prediction
+    evaluate_cs1_prediction,
+    evaluate_cs1_predictions,
 )
 from .generate_cs2 import generate_cs2, evaluate_cs2_prediction
 from .generate_cs3 import generate_cs3, evaluate_cs3_prediction
