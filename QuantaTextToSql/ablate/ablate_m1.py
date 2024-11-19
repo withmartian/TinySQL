@@ -1,5 +1,4 @@
 import torch
-from QuantaTextToSql.training_data.generate_utils import output_inference_text
 
 
 # Function to collect average activations for all heads, MLPs, and layers
