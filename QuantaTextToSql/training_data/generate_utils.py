@@ -14,7 +14,16 @@ def generate_inputs_from_BatchItems(tokenizer, batch_items):
     return (prompt_texts, batched_inputs)
 
 def output_inference_text(tokenizer, outputs):
-    next_token_logits = outputs.logits[:, -1, :]
-    predicted_token_id = next_token_logits.argmax(-1)
-    inference_text = tokenizer.decode(predicted_token_id, skip_special_tokens=True)
-    return inference_text
+    # Process logits for each item in the batch
+    logits = outputs.logits  # Shape: [batch_size, sequence_length, vocab_size]
+    batch_size = logits.size(0)
+    inference_texts = []
+
+    for i in range(batch_size):
+        next_token_logits = logits[i, -1, :]  # Shape: [vocab_size] for the last token of the i-th batch
+        predicted_token_id = next_token_logits.argmax(-1)  # Get the predicted token ID
+        inference_text = tokenizer.decode(predicted_token_id, skip_special_tokens=True)
+        inference_texts.append(inference_text)  # Append the decoded string to the list
+
+    return inference_texts  # Return a list of strings
+

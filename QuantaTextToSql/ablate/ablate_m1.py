@@ -1,39 +1,4 @@
-import os
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from QuantaTextToSql.training_data.generate_utils import output_inference_text
-
-
-# Load the tokenizer and base model from Hugging Face
-def load_bm1():
-    tokenizer = AutoTokenizer.from_pretrained("roneneldan/TinyStories-Instruct-2Layers-33M")
-    model = AutoModelForCausalLM.from_pretrained("roneneldan/TinyStories-Instruct-2Layers-33M")
-    
-    # Ensure the tokenizer has a pad_token
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token 
-        
-    return tokenizer, model
-
-
-# Load the tokenizer and base model from Hugging Face
-def load_tm1():
-    auth_token = os.getenv("HF_AUTH_TOKEN")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        "withmartian/sft_sql_interp_TinyStories-33M_cs1_experiment_7.3",
-        token=auth_token
-    )
-    model = AutoModelForCausalLM.from_pretrained(
-        "withmartian/sft_sql_interp_TinyStories-33M_cs1_experiment_7.3",
-        token=auth_token
-    )
-    
-    # Ensure the tokenizer has a pad_token
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token 
-        
-    return tokenizer, model
 
 
 # Function to collect average activations for all heads, MLPs, and layers
@@ -53,7 +18,7 @@ def collect_m1_activations(model, batched_inputs):
         
         if layer_index is not None:
             if head_index is not None:
-                # Store average activation for a specific attention head from output[BatchSize=100, SeqLen=183, HiddenDimension=1024]
+                # Store average activation for a specific attention head from output[BatchSize=25, SeqLen=~183, HiddenDimension=1024]
                 if layer_index not in cached_avg_activations["head"]:
                     cached_avg_activations["head"][layer_index] = []
                 while len(cached_avg_activations["head"][layer_index]) <= head_index:
@@ -93,8 +58,8 @@ def collect_m1_activations(model, batched_inputs):
 
 
 # Function to ablate using pre-collected average activations
-def ablated_m1_inference(tokenizer, model, cached_avg_activations, batched_inputs, node_type="layer", layer_index=0, head_index=None):
-    
+def ablated_m1_inference(tokenizer, model, cached_avg_activations, batched_inputs, 
+                         node_type="layer", layer_index=0, head_index=None, max_words=100):
     # Ablation hook that uses pre-stored average values
     def ablation_hook(module, input, output):
         if isinstance(output, tuple):
@@ -104,56 +69,56 @@ def ablated_m1_inference(tokenizer, model, cached_avg_activations, batched_input
         if node_type == "head" and head_index is not None:
             the_activation = cached_avg_activations["head"][layer_index][head_index].clone()
             the_activation = the_activation.repeat(output.size(0), 1)
-            
-            #print(f"ablate_head: output.shape: {output.shape}, the_activation.shape: {the_activation.shape}")
             output[:, :, head_index] = the_activation
 
         elif node_type == "mlp":
             the_activation = cached_avg_activations["mlp"][layer_index].clone()
             the_activation = the_activation.unsqueeze(0)
-
-            # Adjust both sequence length (dim 1) and batch size (dim 0)
             if the_activation.size(1) != output.size(1):
-                # Truncate or pad to match output sequence length
                 if the_activation.size(1) > output.size(1):
                     the_activation = the_activation[:, :output.size(1), :]
                 else:
-                    # If activation is shorter, pad with zeros
                     pad_size = output.size(1) - the_activation.size(1)
                     the_activation = torch.nn.functional.pad(the_activation, (0, 0, 0, pad_size, 0, 0))
             the_activation = the_activation.expand(output.size(0), -1, -1)
-
-            assert the_activation.shape == output.shape, f"Shape mismatch: activation {the_activation.shape} vs output {output.shape}"
             output[:] = the_activation
 
         elif node_type == "layer":
             the_activation = cached_avg_activations["layer"][layer_index].clone()
             the_activation = the_activation.unsqueeze(0)
-
-            # Adjust both sequence length (dim 1) and batch size (dim 0)
             if the_activation.size(1) != output.size(1):
-                # Truncate or pad to match output sequence length
                 if the_activation.size(1) > output.size(1):
                     the_activation = the_activation[:, :output.size(1), :]
                 else:
-                    # If activation is shorter, pad with zeros
                     pad_size = output.size(1) - the_activation.size(1)
                     the_activation = torch.nn.functional.pad(the_activation, (0, 0, 0, pad_size, 0, 0))
             the_activation = the_activation.expand(output.size(0), -1, -1)
-
-            assert the_activation.shape == output.shape, f"Shape mismatch: activation {the_activation.shape} vs output {output.shape}"
             output[:] = the_activation
-    
+
     # Register ablation hook
     layer = model.transformer.h[layer_index]
     ablation_hook = layer.register_forward_hook(ablation_hook)
 
-    # Run inference (forward pass) with ablation to understand effect
-    outputs = model(**batched_inputs)  
+    # Generate tokens iteratively
+    input_ids = batched_inputs['input_ids']
+    generated_tokens = input_ids.clone()
+    for _ in range(max_words):
+        outputs = model(input_ids=generated_tokens)
+        next_token_logits = outputs.logits[:, -1, :]
+        next_token = torch.argmax(next_token_logits, dim=-1).unsqueeze(-1)  # Get next token for each batch
 
-    # Generate text with ablated nodes
-    generated_text = output_inference_text(tokenizer, outputs)
+        # Append the new token to the sequence
+        generated_tokens = torch.cat((generated_tokens, next_token), dim=1)
+
+        # Check for EOS token for each sequence in the batch
+        if (next_token == tokenizer.eos_token_id).all():  # Stop if all sequences in the batch hit EOS
+            break
+
+    # Decode generated tokens for all sequences in the batch
+    generated_texts = [tokenizer.decode(seq, skip_special_tokens=True) for seq in generated_tokens]
     
     ablation_hook.remove()
 
-    return (outputs, generated_text)
+    return generated_tokens, generated_texts
+
+
