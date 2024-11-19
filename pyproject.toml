@@ -9,10 +9,8 @@ description = "Tools for use with the quanta text to sql project"
 authors = [{name = "Philip Quirke et al", email = "philipquirkenz@gmail.com"}]
 license = "MIT"
 keywords = ["SQL", "machine learning", "text to SQL", "interpretable AI"]
-urls = {
-    "Homepage" = "https://github.com/withmartian/quanta_text_to_sql",
-    "Repository" = "https://github.com/withmartian/quanta_text_to_sql"
-}
+readme = "README.md"  
+requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.18.1",
     "wheel",
@@ -29,8 +27,9 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 
-[tool.python]
-requires = ">=3.10"
+[project.urls]
+Homepage = "https://github.com/withmartian/quanta_text_to_sql"
+Repository = "https://github.com/withmartian/quanta_text_to_sql"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -39,4 +38,3 @@ namespaces = true
 
 [project.optional-dependencies]
 testing = ["pytest"]
-
