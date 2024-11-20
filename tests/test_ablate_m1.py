@@ -1,7 +1,7 @@
 import unittest
 from QuantaTextToSql.ablate import load_bm1, load_bm1_cs1, load_bm1_cs2, load_bm1_cs3, collect_m1_activations, ablated_m1_inference
-from QuantaTextToSql.training_data import generate_cs1, generate_cs2, generate_cs3, evaluate_cs1_predictions, evaluate_cs2_predictions, evaluate_cs3_predictions
-from QuantaTextToSql.training_data.generate_utils import generate_inputs_from_prompt, generate_inputs_from_BatchItems
+from QuantaTextToSql.training_data import (generate_cs1, generate_cs2, generate_cs3, evaluate_cs1_predictions, evaluate_cs2_predictions, 
+            evaluate_cs3_predictions, generate_inputs_from_prompt, generate_inputs_from_BatchItems)
 
 
 class TestAblate(unittest.TestCase):
