@@ -7,7 +7,6 @@ name = "QuantaTextToSql"
 version = "1.0"
 description = "Tools for use with the quanta text to sql project"
 authors = [{name = "Philip Quirke et al", email = "philipquirkenz@gmail.com"}]
-license = "MIT"
 keywords = ["SQL", "machine learning", "text to SQL", "interpretable AI"]
 readme = "README.md"  
 requires-python = ">=3.10"
