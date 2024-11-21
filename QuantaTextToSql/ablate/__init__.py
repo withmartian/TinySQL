@@ -3,9 +3,8 @@ from .ablate_m1 import (
     ablated_m1_inference,
 )
 
-from .load_m1 import (
-    load_bm1,
-    load_bm1_cs1,
-    load_bm1_cs2,
-    load_bm1_cs3,
+from .load_model import (
+    sql_interp_model_location, 
+    load_model,
+    load_sql_interp_model_name,
 )
