@@ -20,7 +20,7 @@ def sql_interp_model_location( model_num : int, cs_num : int):
         
     if model_num == 2:
         if cs_num == 0:
-            return "huggingface.co/Qwen/Qwen2.5-0.5B-Instruct"
+            return "Qwen/Qwen2.5-0.5B-Instruct"
 
         elif cs_num == 1:
             return "withmartian/sql_interp_bm2_cs1_experiment_4.1"
@@ -33,7 +33,7 @@ def sql_interp_model_location( model_num : int, cs_num : int):
         
     if model_num == 3:
         if cs_num == 0:
-            return "huggingface.co/meta-llama/Llama-3.2-1B-Instruct"
+            return "meta-llama/Llama-3.2-1B-Instruct"
 
         elif cs_num == 1:
             return "withmartian/sql_interp_bm3_cs1_experiment_7.1"
