@@ -6,5 +6,5 @@ from .ablate_m1 import (
 from .load_model import (
     sql_interp_model_location, 
     load_model,
-    load_sql_interp_model_name,
+    load_sql_interp_model,
 )
