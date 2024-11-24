@@ -13,7 +13,6 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.18.1",
     "wheel",
-    "QuantaMechInterp>=1.0"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -37,3 +36,9 @@ namespaces = true
 
 [project.optional-dependencies]
 testing = ["pytest"]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401","F403"]
