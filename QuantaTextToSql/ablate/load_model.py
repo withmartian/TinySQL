@@ -33,7 +33,7 @@ def sql_interp_model_location( model_num : int, cs_num : int):
         
     if model_num == 3:
         if cs_num == 0:
-            return "meta-llama/Llama-3.2-1B-Instruct"
+            return "withmartian/Llama-3.2-1B-Instruct"
 
         elif cs_num == 1:
             return "withmartian/sql_interp_bm3_cs1_experiment_7.1"
