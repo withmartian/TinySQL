@@ -52,7 +52,9 @@ def load_model(model_location, use_flash_attention=True, auth_token=None):
     if auth_token is None:
         auth_token = os.getenv("HF_TOKEN")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_location, token=auth_token)
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_location, 
+        token=auth_token)
    
     if use_flash_attention:
         # qwen model and llama model with flash attention
@@ -67,18 +69,17 @@ def load_model(model_location, use_flash_attention=True, auth_token=None):
     else:
         # model without flash attention
         model = AutoModelForCausalLM.from_pretrained(
-                model_location,
-                torch_dtype=torch.float32,
-                device_map="auto",
-            )
+            model_location,
+            torch_dtype=torch.float32,
+            device_map="auto",
+        )
 
     return tokenizer, model
 
 
-def load_sql_interp_model( model_num : int, cs_num : int, auth_token=None):
+def load_sql_interp_model( model_num : int, cs_num : int, auth_token=None, use_flash_attention=False):
     model_location = sql_interp_model_location(model_num, cs_num)
 
-    use_flash_attention = model_num == 2 or model_num == 3
     tokenizer, model = load_model(model_location, use_flash_attention=use_flash_attention, auth_token=auth_token)
 
     if model_num == 1:
