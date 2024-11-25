@@ -1,3 +1,4 @@
+import gc
 import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -94,3 +95,26 @@ def load_sql_interp_model( model_num : int, cs_num : int, auth_token=None, use_f
 
     return tokenizer, model
 
+
+# Free up memory. Deletes objects that only have "weak references" to them.
+def free_memory():
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    gc.collect()
+
+
+# A list may contain 'weak references' to objects that are garbage collected by free_memory.
+# This function replaces weak with strong references. Call it before free_memory. 
+def replace_weak_references(obj):
+    if isinstance(obj, list):
+        return [replace_weak_references(item) for item in obj]
+    elif hasattr(obj, 'value'):  # For objects with a 'value' attribute
+        return obj.value
+    elif hasattr(obj, 'get_value'):  # For objects with a 'get_value()' method
+        return obj.get_value()
+    elif isinstance(obj, torch.Tensor):
+        return obj.clone().detach()
+    elif hasattr(obj, 'item'):  # For objects with a 'item()' method
+        return obj.item()
+    else:
+        return obj
