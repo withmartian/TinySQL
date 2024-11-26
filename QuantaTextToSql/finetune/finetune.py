@@ -273,6 +273,9 @@ def main():
     # Parse the arguments
     args = parse_args()
 
+    # Load the environment variables
+    load_dotenv()
+
     # Generate a random 7-digit seed
     if args.seed is None:
         seed = random.randrange(100007, 1000000, 10)
@@ -290,7 +293,7 @@ def main():
         wandb.config.update({'seed': seed}, allow_val_change=True)
     
     # Load HF token from environment variable
-    hf_token = os.environ.get("HF_TOKEN")
+    hf_token = os.getenv("HF_TOKEN")
     if hf_token is None:
         raise ValueError("Hugging Face authentication token not found. Please set the HF_TOKEN environment variable.")
 
@@ -322,7 +325,7 @@ def main():
             model.config.pad_token_id = tokenizer.pad_token_id
             #tokenizer.padding_side = "right"
         eval_batch_size = 1024
-    else:
+    elif "roneneldan/TinyStories-Instruct-" or "HuggingFaceTB/SmolLM2-" in args.model_name:
         # tiny-stories model without flash attention
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
@@ -330,10 +333,13 @@ def main():
             device_map="auto",
         )
         eval_batch_size = 256
-        tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
-        model.resize_token_embeddings(len(tokenizer))
-        model.config.pad_token_id = tokenizer.pad_token_id
-        model.resize_token_embeddings(len(tokenizer))
+        if tokenizer.pad_token is None:
+            tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
+            model.resize_token_embeddings(len(tokenizer))
+            model.config.pad_token_id = tokenizer.pad_token_id
+            model.resize_token_embeddings(len(tokenizer))
+    else:
+        raise ValueError("Model not supported!")
 
     # Use the alpaca prompt
     alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
