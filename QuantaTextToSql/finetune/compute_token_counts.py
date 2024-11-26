@@ -5,9 +5,8 @@ import numpy as np
 # Load the dataset and tokenizer
 dataset = load_dataset("dhruvnathawani/cs1_dataset")
 # model_name = "meta-llama/Llama-3.2-3B-Instruct"
-# TODO: Fix error with this model
-model_name = "Qwen/Qwen2-0.5B-Instruct-GGUF"
-#model_name = "roneneldan/TinyStories-Instruct-2Layers-33M"
+# model_name = "Qwen/Qwen2.5-0.5B-Instruct"
+model_name = "roneneldan/TinyStories-Instruct-2Layers-33M"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 
