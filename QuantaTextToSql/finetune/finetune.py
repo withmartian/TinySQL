@@ -6,6 +6,8 @@ import warnings
 import argparse
 import numpy as np
 from tqdm import tqdm
+from pprint import pprint
+from dotenv import load_dotenv
 
 # ML libraries
 import torch
@@ -28,7 +30,7 @@ from QuantaTextToSql.training_data.generate_cs3 import evaluate_cs3_prediction
 
 MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2-0.5B-Instruct",]
 
-# Argument parsing
+# Arguments for the script
 def parse_args():
     parser = argparse.ArgumentParser(description="Fine-tuning, Evaluation, and Interactive Script for SQL Interp")
     # Model and training arguments
@@ -60,10 +62,10 @@ def parse_args():
     mode_group.add_argument("--interactive", action="store_true", help="Run the model in interactive mode")
     mode_group.add_argument("--finetune", action="store_true", help="Fine-tune the model (default behavior)")
 
-    # Device
+    # Device, might not be needed
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device to use")
 
-    # Debugging
+    # Debugging mode
     parser.add_argument("--debug", action="store_true", help="Debug mode")
     return parser.parse_args()
 
@@ -84,6 +86,50 @@ def push_model_to_hf(output_dir, repo_name, organization, commit_message="Add fi
     )
     tokenizer.push_to_hub(repo_id=f"{organization}/{repo_name}", commit_message=commit_message)
     print(f"Model and tokenizer pushed to Hugging Face Hub at {organization}/{repo_name}")
+
+def interactive_mode(args, alpaca_prompt, model, tokenizer):
+    print("Running in interactive mode. Type 'exit' to quit.")
+
+    # Initialize the text generation pipeline
+    text_generator = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        # Adjust parameters as needed
+        # For example, to enable streaming, you can set parameters here
+    )
+
+    while True:
+        try:
+            instruction = input("Instruction (type 'exit' to quit): ")
+            if instruction.lower() == 'exit':
+                break
+            context = input("Context: ")
+            prompt = alpaca_prompt.format(instruction, context)
+
+            # Generate the response
+            response = text_generator(
+                prompt,
+                max_new_tokens=100,
+                temperature=0.7,
+                top_p=0.9,
+                do_sample=True,
+                early_stopping=True,
+            )
+
+            # Extract the generated text
+            generated_text = response[0]['generated_text'][len(prompt):].strip()
+
+            print("Response:")
+            print(generated_text)
+            print("\n")
+
+        except KeyboardInterrupt:
+            print("\nExiting.")
+            break
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            break
 
 class EvaluationCallback(TrainerCallback):
     def __init__(
@@ -222,51 +268,6 @@ def evaluate(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_functio
             f"{dataset_type.capitalize()} Ground Truth Score": gt_score,
         }
     )
-
-def interactive_mode(args, alpaca_prompt, model, tokenizer):
-    print("Running in interactive mode. Type 'exit' to quit.")
-
-    # Initialize the text generation pipeline
-    text_generator = pipeline(
-        "text-generation",
-        model=model,
-        tokenizer=tokenizer,
-        # Adjust parameters as needed
-        # For example, to enable streaming, you can set parameters here
-    )
-
-    while True:
-        try:
-            instruction = input("Instruction (type 'exit' to quit): ")
-            if instruction.lower() == 'exit':
-                break
-            context = input("Context: ")
-
-            prompt = alpaca_prompt.format(instruction, context)
-
-            # Generate the response
-            response = text_generator(
-                prompt,
-                max_new_tokens=100,
-                temperature=0.7,
-                top_p=0.9,
-                do_sample=True,
-                early_stopping=True,
-            )
-
-            # Extract the generated text
-            generated_text = response[0]['generated_text'][len(prompt):].strip()
-
-            print("Response:")
-            print(generated_text)
-            print("\n")
-
-        except KeyboardInterrupt:
-            print("\nExiting.")
-            break
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            break
 
 def main():
     # Parse the arguments
@@ -426,6 +427,7 @@ def main():
         print(f"Steps per epoch: {steps_per_epoch}, Eval steps: {eval_steps}")
 
         # Training arguments
+        #TODO: Add lr_scheduler_type
         training_args = TrainingArguments(
             # Output and Logging Parameters
             output_dir=args.output_dir,
@@ -514,6 +516,11 @@ def main():
         
         # Finish the W&B run
         wandb.finish()
+
+        # Free up GPU memory
+        del model
+        del tokenizer
+        del trainer
 
 if __name__ == "__main__":
     main()
