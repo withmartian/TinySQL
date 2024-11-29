@@ -1,15 +1,46 @@
-from dataclasses import dataclass, replace
-from typing import List, Callable
+from dataclasses import dataclass
+from typing import Optional
 from ..training_data import BatchItem, TableField, SelectField
 
-@dataclass
-class FeatureTest:
-    name: str
-    clean_generator: Callable[[], BatchItem]
-    corrupt_generator: Callable[[], BatchItem]
 
-# Base test case to minimize duplication
-BASE_ITEM = BatchItem(
+@dataclass
+class CorruptibleBatchItem(BatchItem):
+    # Fields describing how this item is corrupted
+    corrupted_feature: str = ""
+    corrupted_english_prompt: Optional[str] = None
+    corrupted_create_statement: Optional[str] = None
+    corrupted_sql_statement: Optional[str] = None
+
+    @property
+    def clean_version(self) -> BatchItem:
+        """Return the clean BatchItem without corruptions"""
+        return BatchItem(
+            command_set=self.command_set,
+            table_name=self.table_name,
+            table_fields=self.table_fields,
+            create_statement=self.create_statement,
+            select=self.select,
+            order_by=self.order_by,
+            english_prompt=self.english_prompt,
+            sql_statement=self.sql_statement
+        )
+    
+    @property
+    def corrupt_version(self) -> BatchItem:
+        """Return a BatchItem with corruptions applied"""
+        return BatchItem(
+            command_set=self.command_set,
+            table_name=self.table_name,
+            table_fields=self.table_fields,
+            create_statement=self.corrupted_create_statement or self.create_statement,
+            select=self.select,
+            order_by=self.order_by,
+            english_prompt=self.corrupted_english_prompt or self.english_prompt,
+            sql_statement=self.corrupted_sql_statement or self.sql_statement
+        )
+
+# Base test case with just the BatchItem fields
+BASE_CLEAN = BatchItem(
     command_set=1,
     table_name="cost",
     table_fields=[
@@ -23,61 +54,35 @@ BASE_ITEM = BatchItem(
     sql_statement="SELECT price, quantity FROM cost"
 )
 
-def make_feature_test(name: str, clean_item: BatchItem, **corrupt_changes) -> FeatureTest:
-    """Helper to create a feature test with minimal code"""
-    return FeatureTest(
-        name=name,
-        clean_generator=lambda: clean_item,
-        corrupt_generator=lambda: replace(clean_item, **corrupt_changes)
-    )
-
-# Feature tests
+# Feature test cases
 FEATURE_TESTS = [
-    make_feature_test(
-        "CreateTableStart",
-        BASE_ITEM,
-        create_statement="MAKE cost (price NUMERIC, quantity INTEGER)"  # Corrupted CREATE
+    CorruptibleBatchItem(
+        **{k: v for k, v in vars(BASE_CLEAN).items()},  # Only copy BatchItem fields
+        corrupted_feature="SqlTableStart",
+        corrupted_create_statement="MAKE cost (price NUMERIC, quantity INTEGER)"
     ),
     
-    make_feature_test(
-        "CreateTableName",
-        BASE_ITEM,
-        create_statement="CREATE TABLE wrong_table (price NUMERIC, quantity INTEGER)"
+    CorruptibleBatchItem(
+        **{k: v for k, v in vars(BASE_CLEAN).items()},
+        corrupted_feature="SqlTableName",
+        corrupted_create_statement="CREATE TABLE wrong_table (price NUMERIC, quantity INTEGER)"
     ),
     
-    make_feature_test(
-        "EngTableName",
-        BASE_ITEM,
-        english_prompt="show me the price and quantity from the wrong_table"
+    CorruptibleBatchItem(
+        **{k: v for k, v in vars(BASE_CLEAN).items()},
+        corrupted_feature="EngTableName",
+        corrupted_english_prompt="show me the price and quantity from the wrong_table"
     ),
     
-    make_feature_test(
-        "EngFieldName",
-        BASE_ITEM,
-        english_prompt="show me the wrong_field and quantity from the cost table"
+    CorruptibleBatchItem(
+        **{k: v for k, v in vars(BASE_CLEAN).items()},
+        corrupted_feature="EngFieldName",
+        corrupted_english_prompt="show me the wrong_field and quantity from the cost table"
     ),
     
-    make_feature_test(
-        "CreateFieldSeparator",
-        BASE_ITEM,
-        create_statement="CREATE TABLE cost (price NUMERIC quantity INTEGER)"  # Missing comma
+    CorruptibleBatchItem(
+        **{k: v for k, v in vars(BASE_CLEAN).items()},
+        corrupted_feature="SqlFieldSeparator",
+        corrupted_create_statement="CREATE TABLE cost (price NUMERIC quantity INTEGER)"
     )
 ]
-
-def generate_test_batch(feature_test: FeatureTest, num_examples: int = 5) -> List[tuple[BatchItem, BatchItem]]:
-    """Generate pairs of clean and corrupt examples for a given feature"""
-    return [(feature_test.clean_generator(), feature_test.corrupt_generator()) 
-            for _ in range(num_examples)]
-
-def get_clean_corrupt_data():
-    # Test all features
-    for feature in FEATURE_TESTS:
-        print(f"\nTesting feature: {feature.name}")
-        clean, corrupt = generate_test_batch(feature, num_examples=1)[0]
-        
-        if feature.name.startswith("Create"):
-            print(f"Clean create: {clean.create_statement}")
-            print(f"Corrupt create: {corrupt.create_statement}")
-        else:
-            print(f"Clean prompt: {clean.english_prompt}")
-            print(f"Corrupt prompt: {corrupt.english_prompt}")
