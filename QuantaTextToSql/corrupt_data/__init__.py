@@ -6,5 +6,5 @@ from .clean_corrupt_data import (
     SQLTABLESTART,
     SQLTABLENAME,
     SQLFIELDSEPARATOR,
-    FeatureTestGenerator
+    CorruptFeatureTestGenerator,
 )

@@ -1,7 +1,8 @@
 from dataclasses import dataclass
-from typing import List, Optional, Iterator
+from typing import List, Optional
 import random
-from QuantaTextToSql.training_data.fragments.models import BatchItem, TableField, SelectField, OrderField
+from QuantaTextToSql.training_data.fragments.models import BatchItem, TableField, SelectField
+
 
 ENGTABLENAME = "EngTableName"
 ENGFIELDNAME = "EngFieldName"
@@ -18,7 +19,7 @@ class CorruptibleBatchItem(BatchItem):
     corrupted_sql_statement: Optional[str] = None
 
     @property
-    def clean_version(self) -> BatchItem:
+    def clean_BatchItem(self) -> BatchItem:
         return BatchItem(
             command_set=self.command_set,
             table_name=self.table_name,
@@ -31,7 +32,7 @@ class CorruptibleBatchItem(BatchItem):
         )
     
     @property
-    def corrupt_version(self) -> BatchItem:
+    def corrupt_BatchItem(self) -> BatchItem:
         return BatchItem(
             command_set=self.command_set,
             table_name=self.table_name,
@@ -43,7 +44,7 @@ class CorruptibleBatchItem(BatchItem):
             sql_statement=self.corrupted_sql_statement or self.sql_statement
         )
 
-class FeatureTestGenerator:
+class CorruptFeatureTestGenerator:
     def __init__(self):
         # Sample data to generate variations
         self.table_names = ["cost", "sales", "inventory", "orders", "products"]
