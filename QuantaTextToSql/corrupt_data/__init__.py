@@ -3,8 +3,9 @@
 from .clean_corrupt_data import (
     ENGTABLENAME,
     ENGFIELDNAME,
-    SQLTABLESTART,
-    SQLTABLENAME,
-    SQLFIELDSEPARATOR,
+    DEFTABLESTART,
+    DEFTABLENAME,
+    DEFFIELDSEPARATOR,
+    DEFFIELDNAME,
     CorruptFeatureTestGenerator,
 )

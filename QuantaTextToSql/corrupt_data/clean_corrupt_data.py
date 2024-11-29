@@ -6,9 +6,10 @@ from QuantaTextToSql.training_data.fragments.models import BatchItem, TableField
 
 ENGTABLENAME = "EngTableName"
 ENGFIELDNAME = "EngFieldName"
-SQLTABLESTART = "SqlTableStart"
-SQLTABLENAME = "SqlTableName"
-SQLFIELDSEPARATOR = "SqlFieldSeparator"
+DEFTABLESTART = "DefTableStart"
+DEFTABLENAME = "DefTableName"
+DEFFIELDNAME = "DefFieldName"
+DEFFIELDSEPARATOR = "DefFieldSeparator"
 
 
 @dataclass
@@ -73,9 +74,10 @@ class CorruptFeatureTestGenerator:
         generators = {
             ENGTABLENAME: self._corrupt_eng_table_name,
             ENGFIELDNAME: self._corrupt_eng_field_name,
-            SQLTABLESTART: self._corrupt_create_table_start,
-            SQLTABLENAME: self._corrupt_create_table_name,
-            SQLFIELDSEPARATOR: self._corrupt_field_separator,
+            DEFTABLESTART: self._corrupt_def_table_start,
+            DEFTABLENAME: self._corrupt_def_table_name,
+            DEFFIELDSEPARATOR: self._corrupt_def_field_separator,
+            DEFFIELDNAME: self._corrupt_def_field_name
         }
 
         if feature not in generators:
@@ -83,24 +85,24 @@ class CorruptFeatureTestGenerator:
         
         return [generators[feature]() for _ in range(n)]
 
-    def _corrupt_create_table_start(self) -> CorruptibleBatchItem:
+    def _corrupt_def_table_start(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
         wrong_starts = ["MAKE", "BUILD", "GENERATE", "CONSTRUCT"]
         wrong_start = random.choice(wrong_starts)
         corrupted = base.create_statement.replace("CREATE TABLE", wrong_start)
         return CorruptibleBatchItem(
             **vars(base),
-            corrupted_feature=SQLTABLESTART,
+            corrupted_feature=DEFTABLESTART,
             corrupted_create_statement=corrupted
         )
 
-    def _corrupt_create_table_name(self) -> CorruptibleBatchItem:
+    def _corrupt_def_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
         wrong_table = random.choice([t for t in self.table_names if t != base.table_name])
         corrupted = base.create_statement.replace(base.table_name, wrong_table)
         return CorruptibleBatchItem(
             **vars(base),
-            corrupted_feature=SQLTABLENAME,
+            corrupted_feature=DEFTABLENAME,
             corrupted_create_statement=corrupted
         )
 
@@ -124,12 +126,28 @@ class CorruptFeatureTestGenerator:
             corrupted_feature=ENGFIELDNAME,
             corrupted_english_prompt=corrupted
         )
-
-    def _corrupt_field_separator(self) -> CorruptibleBatchItem:
+   
+    def _corrupt_def_field_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        corrupted = base.create_statement.replace(",", "")
+        # Pick a field to corrupt and find a different field name
+        original_field = base.table_fields[0].name
+        wrong_field = random.choice([f for f in self.field_names if f != original_field])
+        # Replace only in create statement
+        corrupted = base.create_statement.replace(original_field, wrong_field)
         return CorruptibleBatchItem(
             **vars(base),
-            corrupted_feature=SQLFIELDSEPARATOR,
+            corrupted_feature=DEFFIELDNAME,
             corrupted_create_statement=corrupted
         )
+
+    def _corrupt_def_field_separator(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        # Replace the comma with various incorrect separators
+        wrong_separators = [" ", ";", "|", "&"]
+        wrong_separator = random.choice(wrong_separators)
+        corrupted = base.create_statement.replace(",", wrong_separator)
+        return CorruptibleBatchItem(
+            **vars(base),
+            corrupted_feature=DEFFIELDSEPARATOR,
+            corrupted_create_statement=corrupted
+        )    
