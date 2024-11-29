@@ -8,7 +8,9 @@ build/
 
 QuantaTextToSql/__pycache__/*
 QuantaTextToSql/ablate/__pycache__/*
+QuantaTextToSql/corrupt_data/__pycache__/*
 QuantaTextToSql/finetune/__pycache__/*
+QuantaTextToSql/load_data/__pycache__/*
 QuantaTextToSql/training_data/__pycache__/*
 QuantaTextToSql/training_data/fragments/__pycache__/*
 QuantaTextToSql/finetune/models/
