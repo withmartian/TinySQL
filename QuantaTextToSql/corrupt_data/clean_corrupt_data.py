@@ -3,6 +3,7 @@ from typing import List, Optional
 import random
 from QuantaTextToSql.training_data.fragments.models import BatchItem, TableField, SelectField
 
+UNKNOWN_VALUE = -1
 
 ENGTABLENAME = "EngTableName"
 ENGFIELDNAME = "EngFieldName"
@@ -11,13 +12,14 @@ DEFTABLENAME = "DefTableName"
 DEFFIELDNAME = "DefFieldName"
 DEFFIELDSEPARATOR = "DefFieldSeparator"
 
-
 @dataclass
 class CorruptibleBatchItem(BatchItem):
     corrupted_feature: str = ""
     corrupted_english_prompt: Optional[str] = None
     corrupted_create_statement: Optional[str] = None
     corrupted_sql_statement: Optional[str] = None
+    clean_token_index: int = UNKNOWN_VALUE # Tokenizer index for clean word
+    corrupt_token_index: int = UNKNOWN_VALUE # Tokenizer index for corrupted word    
 
     @property
     def clean_BatchItem(self) -> BatchItem:
@@ -46,7 +48,11 @@ class CorruptibleBatchItem(BatchItem):
         )
 
 class CorruptFeatureTestGenerator:
-    def __init__(self):
+    def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, tokenizer = None):
+        self.model_num = model_num
+        self.cs_num = cs_num
+        self.tokenizer = tokenizer
+
         # Sample data to generate variations
         self.table_names = ["cost", "sales", "inventory", "orders", "products"]
         self.field_names = ["price", "quantity", "amount", "total", "count", "id"]
@@ -69,8 +75,8 @@ class CorruptFeatureTestGenerator:
             sql_statement=f"SELECT {fields[0]}, {fields[1]} FROM {table}"
         )
 
-    def generate_feature_examples(self, feature: str, n: int) -> List[CorruptibleBatchItem]:
-        """Generate n examples of a specific feature test"""
+    def get_generators(self):
+        """Return all the generators"""
         generators = {
             ENGTABLENAME: self._corrupt_eng_table_name,
             ENGFIELDNAME: self._corrupt_eng_field_name,
@@ -79,21 +85,43 @@ class CorruptFeatureTestGenerator:
             DEFFIELDSEPARATOR: self._corrupt_def_field_separator,
             DEFFIELDNAME: self._corrupt_def_field_name
         }
-
-        if feature not in generators:
-            raise ValueError(f"Unknown feature: {feature}")
         
-        return [generators[feature]() for _ in range(n)]
+        return generators
+
+    def generate_feature_examples(self, feature_name: str, batch_size: int = 5) -> List[CorruptibleBatchItem]:
+        """Generate n examples of a specific feature test"""
+        generators = self.get_generators()
+        
+        if feature_name not in generators:
+            raise ValueError(f"Unknown feature: {feature_name}")
+        
+        return [generators[feature_name]() for _ in range(batch_size)]
+
+    def safe_tokenize(self, text):
+        """Tokenize text and return token"""
+        if self.tokenizer is None:
+            return UNKNOWN_VALUE
+        
+        # Llama tokenizes " size" as [128000, 1404] where 128000 is the '<|begin_of_text|>' symbol
+        # print(self.tokenizer.convert_ids_to_tokens([128000]))  # Check what `128000` maps to
+        # print(self.tokenizer.special_tokens_map)  # Ch
+        answer_offset = 1 if self.model_num == 3 else 0
+
+        token = self.tokenizer(" " + text)["input_ids"][answer_offset] # includes a space
+        return token
 
     def _corrupt_def_table_start(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
+        # English prompt may contain "TABLE" so model needs to find "TABLE" after "CREATE" to identify the start of the table name. So we corrupt "CREATE"
         wrong_starts = ["MAKE", "BUILD", "GENERATE", "CONSTRUCT"]
         wrong_start = random.choice(wrong_starts)
-        corrupted = base.create_statement.replace("CREATE TABLE", wrong_start)
+        corrupted = base.create_statement.replace("CREATE", wrong_start)
         return CorruptibleBatchItem(
             **vars(base),
             corrupted_feature=DEFTABLESTART,
-            corrupted_create_statement=corrupted
+            corrupted_create_statement=corrupted,
+            clean_token_index=self.safe_tokenize("CREATE"),
+            corrupt_token_index=self.safe_tokenize(wrong_start),
         )
 
     def _corrupt_def_table_name(self) -> CorruptibleBatchItem:
@@ -103,7 +131,9 @@ class CorruptFeatureTestGenerator:
         return CorruptibleBatchItem(
             **vars(base),
             corrupted_feature=DEFTABLENAME,
-            corrupted_create_statement=corrupted
+            corrupted_create_statement=corrupted,
+            clean_token_index=self.safe_tokenize(base.table_name),
+            corrupt_token_index=self.safe_tokenize(wrong_table),            
         )
 
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:
@@ -113,7 +143,9 @@ class CorruptFeatureTestGenerator:
         return CorruptibleBatchItem(
             **vars(base),
             corrupted_feature=ENGTABLENAME,
-            corrupted_english_prompt=corrupted
+            corrupted_english_prompt=corrupted,
+            clean_token_index=self.safe_tokenize(base.table_name),
+            corrupt_token_index=self.safe_tokenize(wrong_table),               
         )
 
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
@@ -124,7 +156,9 @@ class CorruptFeatureTestGenerator:
         return CorruptibleBatchItem(
             **vars(base),
             corrupted_feature=ENGFIELDNAME,
-            corrupted_english_prompt=corrupted
+            corrupted_english_prompt=corrupted,
+            clean_token_index=self.safe_tokenize(original_field),
+            corrupt_token_index=self.safe_tokenize(wrong_field),               
         )
    
     def _corrupt_def_field_name(self) -> CorruptibleBatchItem:
@@ -137,7 +171,9 @@ class CorruptFeatureTestGenerator:
         return CorruptibleBatchItem(
             **vars(base),
             corrupted_feature=DEFFIELDNAME,
-            corrupted_create_statement=corrupted
+            corrupted_create_statement=corrupted,
+            clean_token_index=self.safe_tokenize(original_field),
+            corrupt_token_index=self.safe_tokenize(wrong_field),               
         )
 
     def _corrupt_def_field_separator(self) -> CorruptibleBatchItem:
@@ -149,5 +185,7 @@ class CorruptFeatureTestGenerator:
         return CorruptibleBatchItem(
             **vars(base),
             corrupted_feature=DEFFIELDSEPARATOR,
-            corrupted_create_statement=corrupted
+            corrupted_create_statement=corrupted,
+            clean_token_index=self.safe_tokenize(","),
+            corrupt_token_index=self.safe_tokenize(wrong_separator),                
         )    
