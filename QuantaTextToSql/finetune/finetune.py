@@ -110,7 +110,7 @@ def interactive_mode(args, alpaca_prompt, model, tokenizer):
             # Generate the response
             response = text_generator(
                 prompt,
-                max_new_tokens=100,
+                max_new_tokens=1000,
                 temperature=0.7,
                 top_p=0.9,
                 do_sample=True,
@@ -203,7 +203,7 @@ def evaluate(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_functio
         generated_ids = model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            max_new_tokens=100,
+            max_new_tokens=1000,
             temperature=0.5,
             top_p=0.9,
             eos_token_id=tokenizer.eos_token_id,
@@ -325,19 +325,29 @@ def main():
             model.config.pad_token_id = tokenizer.pad_token_id
             #tokenizer.padding_side = "right"
         eval_batch_size = 1024
-    elif "roneneldan/TinyStories-Instruct-" or "HuggingFaceTB/SmolLM2-" in args.model_name:
-        # tiny-stories model without flash attention
+    elif "HuggingFaceTB/SmolLM2-" in args.model_name:
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+        )
+        tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
+        model.resize_token_embeddings(len(tokenizer))
+        model.config.pad_token_id = tokenizer.pad_token_id
+        model.resize_token_embeddings(len(tokenizer))
+        eval_batch_size = 256
+    elif "roneneldan/TinyStories-Instruct-" in args.model_name:
+        # tiny-stories model
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
             torch_dtype=torch.float32,
             device_map="auto",
         )
+        tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
+        model.resize_token_embeddings(len(tokenizer))
+        model.config.pad_token_id = tokenizer.pad_token_id
+        model.resize_token_embeddings(len(tokenizer))
         eval_batch_size = 256
-        if tokenizer.pad_token is None:
-            tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
-            model.resize_token_embeddings(len(tokenizer))
-            model.config.pad_token_id = tokenizer.pad_token_id
-            model.resize_token_embeddings(len(tokenizer))
     else:
         raise ValueError("Model not supported!")
 
