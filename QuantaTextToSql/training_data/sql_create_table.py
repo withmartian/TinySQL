@@ -27,7 +27,7 @@ def get_sql_create_table(min_cols, max_cols) -> Tuple[str, List[Tuple[str, str]]
     selected_fields = get_sql_table_fields(table_name, num_columns)
     
     # Build the CREATE TABLE statement
-    sql_parts = [f"CREATE TABLE {table_name} ("]
+    sql_parts = [f"CREATE TABLE {table_name} ( "]
     
     # Add columns
     column_definitions = []
@@ -36,6 +36,6 @@ def get_sql_create_table(min_cols, max_cols) -> Tuple[str, List[Tuple[str, str]]
        
     # Combine all parts
     sql_parts.append(",\n".join(column_definitions))
-    sql_parts.append(")")
+    sql_parts.append(" )")
     
     return (table_name, selected_fields, "\n".join(sql_parts))
