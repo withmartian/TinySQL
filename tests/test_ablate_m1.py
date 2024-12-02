@@ -1,7 +1,9 @@
 import unittest
-from QuantaTextToSql.ablate import load_bm1, load_bm1_cs1, load_bm1_cs2, load_bm1_cs3, collect_m1_activations, ablated_m1_inference
-from QuantaTextToSql.training_data import generate_cs1, generate_cs2, generate_cs3, evaluate_cs1_predictions, evaluate_cs2_predictions, evaluate_cs3_predictions
-from QuantaTextToSql.training_data.generate_utils import generate_inputs_from_prompt, generate_inputs_from_BatchItems
+from QuantaTextToSql.ablate import collect_m1_activations, ablated_m1_inference
+from QuantaTextToSql.load_data import load_sql_interp_model
+from QuantaTextToSql.training_data import (generate_cs1, generate_cs2, generate_cs3, evaluate_cs1_predictions, evaluate_cs2_predictions, 
+            evaluate_cs3_predictions, generate_inputs_from_prompt, generate_inputs_from_BatchItems)
+from tests.test_util import TEST_USE_FLASH_ATTENTION,TEST_DEVICE_MAP
 
 
 class TestAblate(unittest.TestCase):
@@ -60,7 +62,7 @@ class TestAblate(unittest.TestCase):
 class TestAblate_BM1(TestAblate):
 
     def setUp(self):
-        tokenizer, model = load_bm1()
+        tokenizer, model = load_sql_interp_model(1, 0, use_flash_attention=TEST_USE_FLASH_ATTENTION, device_map=TEST_DEVICE_MAP)
         batch_items = generate_cs1(25)
         (_, inputs) = generate_inputs_from_BatchItems(tokenizer, batch_items) 
         cached_acts = collect_m1_activations(model, inputs)     
@@ -86,7 +88,7 @@ class TestAblate_BM1(TestAblate):
 class TestAblate_BM1_CS1(TestAblate):
    
     def setUp(self):
-        tokenizer, model = load_bm1_cs1()
+        tokenizer, model = load_sql_interp_model(1, 1, use_flash_attention=TEST_USE_FLASH_ATTENTION, device_map=TEST_DEVICE_MAP)
         batch_items = generate_cs1(10)
         (_, inputs) = generate_inputs_from_BatchItems(tokenizer, batch_items) 
         cached_acts = collect_m1_activations(model, inputs)     
@@ -126,7 +128,7 @@ class TestAblate_BM1_CS1(TestAblate):
 class TestAblate_BM1_CS2(TestAblate):
 
     def setUp(self):
-        tokenizer, model = load_bm1_cs2()
+        tokenizer, model = load_sql_interp_model(1, 2, use_flash_attention=TEST_USE_FLASH_ATTENTION, device_map=TEST_DEVICE_MAP)
         batch_items = generate_cs2(10)
         (_, inputs) = generate_inputs_from_BatchItems(tokenizer, batch_items)
         cached_acts = collect_m1_activations(model, inputs)     
@@ -164,7 +166,7 @@ class TestAblate_BM1_CS2(TestAblate):
 class TestAblate_BM1_CS3(TestAblate):
 
     def setUp(self):
-        tokenizer, model = load_bm1_cs3()
+        tokenizer, model = load_sql_interp_model(1, 3, use_flash_attention=TEST_USE_FLASH_ATTENTION, device_map=TEST_DEVICE_MAP)
         batch_items = generate_cs3(10)
         (_, inputs) = generate_inputs_from_BatchItems(tokenizer, batch_items)
         cached_acts = collect_m1_activations(model, inputs)     
