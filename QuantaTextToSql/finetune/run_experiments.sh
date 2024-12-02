@@ -30,8 +30,7 @@ weight_decay=0.01
 # Define the list of learning rates
 learning_rates=(2e-5)
 
-# Insert your Hugging Face API token here
-export HF_TOKEN="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"
+# Insert your Hugging Face API token in the .env file
 
 sanitized_project_name=$(echo "$project_name" | tr '/\\:#?%,' '_')
 
