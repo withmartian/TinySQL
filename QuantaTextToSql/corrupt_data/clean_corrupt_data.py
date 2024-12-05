@@ -17,10 +17,10 @@ class CorruptibleBatchItem(BatchItem):
     feature_name: str = ""
     clean_token: str = "" # Clean word
     corrupt_token: str = "" # Corrupted word   
-    clean_tokenizer_index: int = UNKNOWN_VALUE # Tokenizer index for clean word
-    corrupt_tokenizer_index: int = UNKNOWN_VALUE # Tokenizer index for corrupted word    
-    prompt_token_index: int = UNKNOWN_VALUE # Token index in prompt
-    answer_token_index: int = UNKNOWN_VALUE # Token index in sql command answer
+    clean_tokenizer_index: int = UNKNOWN_VALUE # Tokenizer vocab index for clean word
+    corrupt_tokenizer_index: int = UNKNOWN_VALUE # Tokenizer vocab index for corrupted word    
+    prompt_token_index: int = UNKNOWN_VALUE # Token index in prompt of clean/corrupt word
+    answer_token_index: int = UNKNOWN_VALUE # Token index in sql command answer of clean/corrupt word
     corrupt_english_prompt: Optional[str] = None
     corrupt_create_statement: Optional[str] = None
     corrupt_sql_statement: Optional[str] = None
