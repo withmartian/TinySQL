@@ -1,0 +1,98 @@
+model_suite: apache-2.0
+
+special_system_instructions: >-
+  You are an SQL expert. Your role is to write SQL prompts, SELECT statements, and CREATE TABLE statements.
+
+categorical_seed_columns:
+  - name: topic
+    values:
+      - sales
+      - customers
+      - products
+      - orders
+      - employees
+      - inventory
+      - suppliers
+      - finance
+      - marketing
+      - human_resources
+
+  - name: instruction_phrase
+    values:
+      - "Construct an SQL query to"
+      - "Retrieve the"
+      - "List the"
+      - "Show me the"
+      - "Fetch the"
+      - "Display the"
+      - "Extract the"
+      - "Find the"
+      - "Provide the"
+      - "Get the"
+      - "Select the"
+    num_new_values_to_generate: 15
+
+generated_data_columns:
+  - name: table_name
+    generation_prompt: >-
+      Generate a realistic SQL table name relevant to the topic '{topic}'. The table name should be in snake_case, descriptive yet concise, and should not include any additional text or formatting.
+
+    columns_to_list_in_prompt: [topic]
+
+  - name: column_name
+    generation_prompt: >-
+      Generate a realistic SQL column name for the table '{table_name}' in the context of topic '{topic}'. The column name should be in snake_case, relevant to the table's content, and should not include any additional text or formatting. Ensure that the column name will semantically match exactly between the prompt, SQL context, and SQL statement.
+
+    columns_to_list_in_prompt: [table_name, topic]
+
+  - name: column_data_type
+    generation_prompt: >-
+      Suggest an appropriate SQL numeric data type (e.g., INT, FLOAT, DECIMAL) for the column '{column_name}' in the table '{table_name}'. The data type should be valid and appropriate for numeric data that '{column_name}' would store. Do not include any additional text or formatting.
+
+    columns_to_list_in_prompt: [column_name, table_name]
+
+  - name: sql_prompt
+    generation_prompt: >-
+      Generate a clear and specific natural language instruction for a SQL query to select '{column_name}' from '{table_name}'. The instruction should begin with the phrase '{instruction_phrase}'.
+
+      Important Guidelines:
+        * The instruction should be clear and concise.
+        * Do not include any additional text or formatting.
+
+    columns_to_list_in_prompt: [instruction_phrase, column_name, table_name]
+
+  - name: sql_context
+    generation_prompt: >-
+      Generate the SQL CREATE TABLE statement for a table named '{table_name}' that includes exactly one column '{column_name}' with data type '{column_data_type}'. The statement should be executable, syntactically correct, and should not include any additional text or formatting.
+
+      Important Guidelines:
+        * Include only one column in the table.
+        * Ensure the SQL is executable and syntactically correct.
+        * Do not include any additional text or formatting.
+
+    columns_to_list_in_prompt: [table_name, column_name, column_data_type]
+    llm_type: code
+
+  - name: sql
+    generation_prompt: >-
+      Write the SQL query that selects '{column_name}' from '{table_name}' as per the instruction '{sql_prompt}'.
+
+      Important Guidelines:
+        * Ensure the SQL query matches the instruction exactly.
+        * The query should select exactly one column.
+        * Do not include any additional text or formatting.
+
+    columns_to_list_in_prompt: [sql_prompt, column_name, table_name]
+    llm_type: code
+
+post_processors:
+  - validator: code
+    settings:
+      code_lang: ansi
+      code_columns: [sql_context, sql]
+
+  - evaluator: text_to_sql
+    settings:
+      text_column: sql_prompt
+      code_column: sql
+      context_column: sql_context
