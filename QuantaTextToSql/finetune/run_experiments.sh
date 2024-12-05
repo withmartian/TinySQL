@@ -24,7 +24,7 @@ num_train_epochs=3
 batch_size=8
 gradient_accumulation_steps=1
 warmup_steps=50
-max_seq_length=256
+max_seq_length=512
 weight_decay=0.01
 
 # Define the list of learning rates
@@ -64,7 +64,7 @@ for model_name in "${model_names[@]}"; do
     echo "Simplified: $simplified_model_name"
 
     for dataset_name in "${dataset_names[@]}"; do
-        sub_experiment_counter=6
+        sub_experiment_counter=7
         # Loop through each learning rate and run the script
         for lr in "${learning_rates[@]}"; do
             # Create the experiment name like sft_llama3.1_lr_experiment_2.1, 2.2, etc.
