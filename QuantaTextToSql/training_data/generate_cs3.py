@@ -4,8 +4,8 @@ from .generate_cs2 import evaluate_cs2_prediction_score, generate_cs2
 
 
 # Generate a batch of "command set 3" prompts and answers: SELECT MAX(x1), MIN(x2), x3, SUM(x4) FROM yy ORDER BY zz DESC
-def generate_cs3(batch_size, order_by_clause_probability=0.9):
-  return generate_cs2(batch_size, order_by_clause_probability, use_aggregates=True)
+def generate_cs3(batch_size, order_by_clause_probability=0.9, min_cols=2, max_cols=12):
+  return generate_cs2(batch_size, order_by_clause_probability, use_aggregates=True, min_cols=min_cols, max_cols=max_cols)
 
 
 # Returns accuracy of a "command set 3" predicted answer compared to the ground truth

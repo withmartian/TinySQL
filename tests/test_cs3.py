@@ -1,6 +1,6 @@
 import unittest
 
-from QuantaTextToSql.training_data import (generate_cs3, evaluate_cs3_prediction)
+from QuantaTextToSql.training_data import (generate_cs3, evaluate_cs3_prediction, generate_csn)
 
 
 # Command Set 3 = MAX, MIN, AVG, SUM, COUNT
@@ -95,3 +95,11 @@ class TestCommandSet3(unittest.TestCase):
             max_accuracy = self.include_prediction(i, prediction, accuracy, threshold, max_accuracy)       
 
         print(f"Max Accuracy: {max_accuracy:.2f}")
+
+
+    def test_generate_csn(self):
+        generate_csn(5, 1, 0.9, False, 2, 6)
+        generate_csn(5, 2, 0.9, False, 3,3)
+        generate_csn(5, 3, 0.9, True, 1, 4)
+
+    

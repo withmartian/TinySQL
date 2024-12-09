@@ -26,4 +26,3 @@ def output_inference_text(tokenizer, outputs):
         inference_texts.append(inference_text)  # Append the decoded string to the list
 
     return inference_texts  # Return a list of strings
-

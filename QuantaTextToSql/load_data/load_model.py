@@ -2,6 +2,7 @@ import gc
 import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from nnsight import LanguageModel
 
 
 # Load the tokenizer and trained model for model 1, 2, or 3 and command set 0 (base model), 1, 2, or 3
@@ -105,6 +106,18 @@ def load_sql_interp_model( model_num : int, cs_num : int, auth_token=None, use_f
     return tokenizer, model
 
 
+def load_tinysql_model( model_num : int, cs_num : int, auth_token=None):
+
+    if model_num == 1:
+        the_tokenizer, the_model = load_sql_interp_model(model_num, cs_num, auth_token=auth_token, use_flash_attention=False)
+        model = LanguageModel(the_model, the_tokenizer)
+        model.tokenizer = the_tokenizer
+    else:
+        model = LanguageModel(sql_interp_model_location(model_num, cs_num), device_map="auto")
+
+    return model
+
+
 # Free up memory. Deletes objects that only have "weak references" to them.
 def free_memory():
     if torch.cuda.is_available():
@@ -127,3 +140,23 @@ def replace_weak_references(obj):
         return obj.item()
     else:
         return obj
+    
+
+def get_model_sizes( model_num, model, show = True ):
+    # Old code
+    # n_heads = 16 if model_num == 1 else 7 if model_num == 2 else 16
+    # n_dim = 64 if model_num == 1 else 128 if model_num == 2 else 128  
+        
+    if model_num == 1:
+        N_LAYERS = len(model.transformer.h)
+    else:
+        N_LAYERS = len(model.model.layers)
+    N_HEADS = 16 if model_num == 1 else 7 if model_num == 2 else 16
+
+    D_MODEL = model.transformer.wte.embedding_dim if model_num == 1 else model.config.hidden_size
+    D_HEAD = D_MODEL // N_HEADS  
+
+    if show:
+        print("N_LAYERS="+str(N_LAYERS), "N_HEADS="+str(N_HEADS), "D_MODEL="+str(D_MODEL), "D_HEAD="+str(D_HEAD))
+
+    return N_LAYERS, N_HEADS, D_MODEL, D_HEAD

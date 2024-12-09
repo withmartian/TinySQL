@@ -6,12 +6,12 @@ from .generate_cs1 import evaluate_cs1_prediction_score, get_english_select_from
 
 
 # Generate a batch of "command set 2" prompts and answers: SELECT xx FROM yy ORDER BY zz DESC
-def generate_cs2(batch_size, order_by_clause_probability=0.9, use_aggregates=False):
+def generate_cs2(batch_size, order_by_clause_probability=0.9, use_aggregates=False, min_cols=2, max_cols=12):
   
 
     batch = []
     for i in range(batch_size):
-        (table_name, table_fields, create_table_statement) = get_sql_create_table(2, 12)
+        (table_name, table_fields, create_table_statement) = get_sql_create_table(min_cols=min_cols, max_cols=max_cols)
 
         (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, use_aggregates)
         english_select_from_prompt = get_english_select_from(table_name, selected_fields)
