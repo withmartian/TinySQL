@@ -71,7 +71,7 @@ def load_model(model_location, auth_token=None, use_flash_attention=True, device
         # qwen model and llama model with flash attention
         # Prerequisite: pip install flash-attn==2.0.2
         # From https://github.com/Dao-AILab/flash-attention
-        model = AutoModelForCausalLM.from_pretrained(
+        auto_model = AutoModelForCausalLM.from_pretrained(
             model_location,
             torch_dtype=torch.bfloat16,
             device_map=device_map,
@@ -79,43 +79,43 @@ def load_model(model_location, auth_token=None, use_flash_attention=True, device
         )
     else:
         # model without flash attention
-        model = AutoModelForCausalLM.from_pretrained(
+        auto_model = AutoModelForCausalLM.from_pretrained(
             model_location,
             torch_dtype=torch.float32,
             device_map=device_map,
         )
 
-    return tokenizer, model
+    return tokenizer, auto_model
 
 
 def load_sql_interp_model( model_num : int, cs_num : int, auth_token=None, use_flash_attention=True, device_map="auto"):
     model_location = sql_interp_model_location(model_num, cs_num)
 
-    tokenizer, model = load_model(model_location, auth_token=auth_token, use_flash_attention=use_flash_attention, device_map=device_map)
+    tokenizer, auto_model = load_model(model_location, auth_token=auth_token, use_flash_attention=use_flash_attention, device_map=device_map)
 
     if model_num == 1:
         tokenizer.padding_side = "left"
         tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
 
-        model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
+        auto_model.resize_token_embeddings(len(tokenizer), mean_resizing=False)
 
-        model.config.pad_token_id = tokenizer.pad_token_id
+        auto_model.config.pad_token_id = tokenizer.pad_token_id
 
-        model.resize_token_embeddings(len(tokenizer))
+        auto_model.resize_token_embeddings(len(tokenizer))
 
-    return tokenizer, model
+    return tokenizer, auto_model
 
 
 def load_tinysql_model( model_num : int, cs_num : int, auth_token=None):
 
     if model_num == 1:
-        the_tokenizer, the_model = load_sql_interp_model(model_num, cs_num, auth_token=auth_token, use_flash_attention=False)
-        model = LanguageModel(the_model, the_tokenizer)
-        model.tokenizer = the_tokenizer
+        the_tokenizer, auto_model = load_sql_interp_model(model_num, cs_num, auth_token=auth_token, use_flash_attention=False)
+        language_model = LanguageModel(auto_model, the_tokenizer)
+        language_model.tokenizer = the_tokenizer
     else:
-        model = LanguageModel(sql_interp_model_location(model_num, cs_num), device_map="auto")
+        language_model = LanguageModel(sql_interp_model_location(model_num, cs_num), device_map="auto")
 
-    return model
+    return language_model
 
 
 # Free up memory. Deletes objects that only have "weak references" to them.
@@ -123,6 +123,9 @@ def free_memory():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     gc.collect()
+
+    # If you are NOT working with gradients, you can use the following code, before a "trace" call, to free up memory.
+    # with torch.no_grad():
 
 
 # A list may contain 'weak references' to objects that are garbage collected by free_memory.
