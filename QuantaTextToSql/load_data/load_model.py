@@ -124,6 +124,9 @@ def free_memory():
         torch.cuda.empty_cache()
     gc.collect()
 
+    # If you are NOT working with gradients, you can use the following code, before a "trace" call, to free up memory.
+    # with torch.no_grad():
+
 
 # A list may contain 'weak references' to objects that are garbage collected by free_memory.
 # This function replaces weak with strong references. Call it before free_memory. 
