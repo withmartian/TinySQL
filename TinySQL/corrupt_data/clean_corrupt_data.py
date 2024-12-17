@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 import random
-from QuantaTextToSql.training_data.fragments.models import BatchItem, TableField, SelectField
+from TinySQL.training_data.fragments.models import BatchItem, TableField, SelectField
 
 UNKNOWN_VALUE = -1
 

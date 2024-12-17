@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "QuantaTextToSql"
+name = "TinySQL"
 version = "1.0"
 description = "Tools for use with the quanta text to sql project"
 authors = [{name = "Philip Quirke et al", email = "philipquirkenz@gmail.com"}]
@@ -26,12 +26,12 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/withmartian/quanta_text_to_sql"
-Repository = "https://github.com/withmartian/quanta_text_to_sql"
+Homepage = "https://github.com/withmartian/TinySQL"
+Repository = "https://github.com/withmartian/TinySQL"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["QuantaTextToSql*"]
+include = ["TinySQL*"]
 namespaces = true
 
 [project.optional-dependencies]

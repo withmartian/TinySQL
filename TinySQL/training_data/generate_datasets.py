@@ -4,11 +4,10 @@ sys.path.append('/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text
 import pandas as pd
 import json
 from datasets import Dataset, DatasetDict
-from QuantaTextToSql.training_data.generate_cs1 import generate_cs1, evaluate_cs1_prediction
-from QuantaTextToSql.training_data.generate_cs2 import generate_cs2, evaluate_cs2_prediction
-from QuantaTextToSql.training_data.generate_cs3 import generate_cs3, evaluate_cs3_prediction
-
-from QuantaTextToSql.training_data.fragments.models import BatchItem, TableField, SelectField, OrderField
+from TinySQL.training_data.generate_cs1 import generate_cs1, evaluate_cs1_prediction
+from TinySQL.training_data.generate_cs2 import generate_cs2, evaluate_cs2_prediction
+from TinySQL.training_data.generate_cs3 import generate_cs3, evaluate_cs3_prediction
+from TinySQL.training_data.fragments.models import BatchItem, TableField, SelectField, OrderField
 
 def batchitem_to_dict(batch_item):
     d = {}

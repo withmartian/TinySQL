@@ -1,7 +1,7 @@
 import unittest
-from QuantaTextToSql.ablate import collect_m1_activations, ablated_m1_inference
-from QuantaTextToSql.load_data import load_sql_interp_model
-from QuantaTextToSql.training_data import (generate_cs1, generate_cs2, generate_cs3, evaluate_cs1_predictions, evaluate_cs2_predictions, 
+from TinySQL.ablate import collect_m1_activations, ablated_m1_inference
+from TinySQL.load_data import load_sql_interp_model
+from TinySQL.training_data import (generate_cs1, generate_cs2, generate_cs3, evaluate_cs1_predictions, evaluate_cs2_predictions, 
             evaluate_cs3_predictions, generate_inputs_from_prompt, generate_inputs_from_BatchItems)
 from tests.test_util import TEST_USE_FLASH_ATTENTION,TEST_DEVICE_MAP
 

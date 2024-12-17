@@ -1,4 +1,4 @@
-﻿# quanta_text_to_sql
+﻿# TinySQL
 
 # Introduction
 How does a language model use this prompt:
@@ -34,7 +34,7 @@ Resources associated with this project include:
 
 ## Folders, Files and Classes 
 This library contains files:
-- **QuantaTextToSQL:** Python library code imported into the notebooks:
+- **TinySQL:** Python library code imported into the notebooks:
   - load_data: Load the supported base models openai-community/gpt2, Qwen/Qwen2.5-0.5B-Instruct, withmartian/Llama-3.2-1B-Instruct and the trained model derived from them.
   - training_data: Generate training data associated with the command sets. Also evaluate (score) the accuracy of model predictions.
   - gretel_dd: Generate training data associated with the command sets using the [Gretel AI](https://gretel.ai/) synthetic data generation tools. 
@@ -54,8 +54,8 @@ This library contains files:
 From source
 
 ```bash
-git clone https://github.com/withmartian/quanta_text_to_sql.git
-cd QuantaTextToSql
+git clone https://github.com/withmartian/TinySQL.git
+cd TinySQL
 pip install .
 ```
 

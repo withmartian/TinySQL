@@ -1,6 +1,6 @@
 import unittest
 
-from QuantaTextToSql.training_data import (generate_cs3, evaluate_cs3_prediction, generate_csn)
+from TinySQL.training_data import (generate_cs3, evaluate_cs3_prediction, generate_csn)
 
 
 # Command Set 3 = MAX, MIN, AVG, SUM, COUNT
