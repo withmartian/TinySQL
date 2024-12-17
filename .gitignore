@@ -6,21 +6,21 @@
 dist/
 build/
 
-QuantaTextToSql/__pycache__/*
-QuantaTextToSql/ablate/__pycache__/*
-QuantaTextToSql/corrupt_data/__pycache__/*
-QuantaTextToSql/finetune/__pycache__/*
-QuantaTextToSql/load_data/__pycache__/*
-QuantaTextToSql/training_data/__pycache__/*
-QuantaTextToSql/training_data/fragments/__pycache__/*
-QuantaTextToSql/finetune/models/
-QuantaTextToSql/finetune/wandb/
-QuantaTextToSql/finetune/old/
-QuantaTextToSql/finetuning/__pycache__/*
-QuantaTextToSql/training_data/fragments/__pycache__/*
-QuantaTextToSql/training_data/__pycache__/*
-QuantaTextToSql/finetune/__pycache__/
-QuantaTextToSql/__pycache__/
+TinySQL/__pycache__/*
+TinySQL/ablate/__pycache__/*
+TinySQL/corrupt_data/__pycache__/*
+TinySQL/finetune/__pycache__/*
+TinySQL/load_data/__pycache__/*
+TinySQL/training_data/__pycache__/*
+TinySQL/training_data/fragments/__pycache__/*
+TinySQL/finetune/models/
+TinySQL/finetune/wandb/
+TinySQL/finetune/old/
+TinySQL/finetuning/__pycache__/*
+TinySQL/training_data/fragments/__pycache__/*
+TinySQL/training_data/__pycache__/*
+TinySQL/finetune/__pycache__/
+TinySQL/__pycache__/
 training_data_old/
 
 tests/__pycache__/*

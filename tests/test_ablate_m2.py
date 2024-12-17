@@ -1,5 +1,5 @@
-from QuantaTextToSql.load_data import load_sql_interp_model
-from QuantaTextToSql.training_data import (generate_cs1, generate_inputs_from_BatchItems)
+from TinySQL.load_data import load_sql_interp_model
+from TinySQL.training_data import (generate_cs1, generate_inputs_from_BatchItems)
 from tests.test_ablate_m1 import TestAblate
 from tests.test_util import TEST_USE_FLASH_ATTENTION,TEST_DEVICE_MAP
 

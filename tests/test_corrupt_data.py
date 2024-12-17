@@ -1,6 +1,6 @@
 import unittest
-from QuantaTextToSql.load_data import load_sql_interp_model
-from QuantaTextToSql import UNKNOWN_VALUE, ENGTABLENAME, ENGFIELDNAME, DEFCREATETABLE, DEFTABLENAME, DEFFIELDSEPARATOR, DEFFIELDNAME, CorruptFeatureTestGenerator
+from TinySQL.load_data import load_sql_interp_model
+from TinySQL import UNKNOWN_VALUE, ENGTABLENAME, ENGFIELDNAME, DEFCREATETABLE, DEFTABLENAME, DEFFIELDSEPARATOR, DEFFIELDNAME, CorruptFeatureTestGenerator
 from tests.test_util import TEST_DEVICE_MAP
 
 class TestCorruptData(unittest.TestCase):

@@ -21,12 +21,12 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 
 warnings.filterwarnings("ignore")
 
-# QuantaTextToSql evaluation function imports
+# TinySQL evaluation function imports
 sys.path.append("/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql")
-from QuantaTextToSql.training_data.generate_datasets import dict_to_batchitem
-from QuantaTextToSql.training_data.generate_cs1 import evaluate_cs1_prediction
-from QuantaTextToSql.training_data.generate_cs2 import evaluate_cs2_prediction
-from QuantaTextToSql.training_data.generate_cs3 import evaluate_cs3_prediction
+from TinySQL.training_data.generate_datasets import dict_to_batchitem
+from TinySQL.training_data.generate_cs1 import evaluate_cs1_prediction
+from TinySQL.training_data.generate_cs2 import evaluate_cs2_prediction
+from TinySQL.training_data.generate_cs3 import evaluate_cs3_prediction
 
 MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2-0.5B-Instruct",]
 
