@@ -6,6 +6,7 @@ from nnsight import LanguageModel
 
 
 # Load the tokenizer and trained model for model 1, 2, or 3 and command set 0 (base model), 1, 2, or 3
+# If you are changing the models, consider updating the HF collection withmartian/tinysql as well. 
 def sql_interp_model_location( model_num : int, cs_num : int):
 
     if model_num == 0:
