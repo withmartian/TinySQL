@@ -5,11 +5,8 @@ from tests.test_util import TEST_DEVICE_MAP
 
 class TestCorruptData(unittest.TestCase):
 
-    def show_examples(self, feature_name):
-       # TinyStories never uses flash attention
-        model_num = 1
-        cs_num = 1
-        tokenizer, _ = load_sql_interp_model(model_num, cs_num, use_flash_attention=False, device_map=TEST_DEVICE_MAP)
+    def show_examples(self, feature_name, model_num, cs_num=1, use_flash_attention=False):
+        tokenizer, _ = load_sql_interp_model(model_num, cs_num, use_flash_attention=use_flash_attention, device_map=TEST_DEVICE_MAP)
          
         generator = CorruptFeatureTestGenerator(model_num=model_num, cs_num=cs_num, tokenizer=tokenizer)
 
@@ -25,13 +22,9 @@ class TestCorruptData(unittest.TestCase):
                 print(f"Clean prompt: {example.english_prompt}")
                 print(f"Corrupt prompt: {example.corrupt_english_prompt}")
 
-            if False:
-                example.print_clean()
-                example.print_corrupt()
-
-            assert example.clean_token != ""
-            assert example.corrupt_token != ""
-            assert example.clean_token != example.corrupt_token
+            assert example.clean_token_str != ""
+            assert example.corrupt_token_str != ""
+            assert example.clean_token_str != example.corrupt_token_str
             assert example.clean_tokenizer_index != UNKNOWN_VALUE
             assert example.corrupt_tokenizer_index != UNKNOWN_VALUE
             assert example.clean_tokenizer_index != example.corrupt_tokenizer_index  
@@ -49,22 +42,26 @@ class TestCorruptData(unittest.TestCase):
 
         return generator, examples
  
-    def test_generate_ENGTABLENAME(self): 
-        self.show_examples(ENGTABLENAME)
+    def test_m1_generate_ENGTABLENAME(self): 
+        self.show_examples(ENGTABLENAME, 1)
         
-    def test_generate_ENGFIELDNAME(self):   
-        self.show_examples(ENGFIELDNAME)
+    def test_m1_generate_ENGFIELDNAME(self):   
+        self.show_examples(ENGFIELDNAME, 1)
 
     # Suppress until CREATE is in the TinyStories Vocab     
     #def test_generate_DEFCREATETABLE(self):    
-    #    self.show_examples(DEFCREATETABLE)
+    #    self.show_examples(DEFCREATETABLE, 1)
 
-    def test_generate_DEFTABLENAME(self):   
-        self.show_examples(DEFTABLENAME)
+    def test_m1_generate_DEFTABLENAME(self):   
+        self.show_examples(DEFTABLENAME, 1)
 
     # Need to debug how "," is tokenized 
     #def test_generate_DEFFIELDSEPARATOR(self):   
-    #    self.show_examples(DEFFIELDSEPARATOR)
+    #    self.show_examples(DEFFIELDSEPARATOR, 1)
 
-    def test_generate_DEFFIELDNAME(self):  
-        self.show_examples(DEFFIELDNAME)
+    def test_m1_generate_DEFFIELDNAME(self):  
+        self.show_examples(DEFFIELDNAME, 1)
+
+    def test_m2_generate_DEFFIELDNAME(self):  
+        self.show_examples(DEFFIELDNAME, 2)
+
