@@ -15,8 +15,8 @@ DEFFIELDSEPARATOR = "DefFieldSeparator"
 @dataclass
 class CorruptibleBatchItem(BatchItem):
     feature_name: str = ""
-    clean_token: str = "" # Clean word
-    corrupt_token: str = "" # Corrupted word   
+    clean_token_str: str = "" # Clean word
+    corrupt_token_str: str = "" # Corrupted word
     clean_tokenizer_index: int = UNKNOWN_VALUE # Tokenizer vocab index for clean word
     corrupt_tokenizer_index: int = UNKNOWN_VALUE # Tokenizer vocab index for corrupted word    
     prompt_token_index: int = UNKNOWN_VALUE # Token index in prompt of clean/corrupt word
@@ -53,11 +53,28 @@ class CorruptibleBatchItem(BatchItem):
     
     def print_clean(self):
         full = self.clean_BatchItem.get_alpaca_prompt() + self.clean_BatchItem.sql_statement 
-        print( "Clean: Token=", self.clean_token, "TokenizerIndex=", self.clean_tokenizer_index, "PromptTokenIndex=", self.prompt_token_index, "AnswerTokenIndex=", self.answer_token_index, "Prompt+Answer=", full )
+        print( "Clean: Token=", self.clean_token_str, "TokenizerIndex=", self.clean_tokenizer_index, "PromptTokenIndex=", self.prompt_token_index, "AnswerTokenIndex=", self.answer_token_index, "Prompt+Answer=", full )
 
     def print_corrupt(self):
         full = self.corrupt_BatchItem.get_alpaca_prompt() + self.corrupt_BatchItem.sql_statement
-        print( "Corrupt: Token=", self.corrupt_token, "TokenizerIndex=", self.corrupt_tokenizer_index, "PromptTokenIndex=", self.prompt_token_index, "AnswerTokenIndex=", self.answer_token_index, "Prompt+Answer=", full )
+        print( "Corrupt: Token=", self.corrupt_token_str, "TokenizerIndex=", self.corrupt_tokenizer_index, "PromptTokenIndex=", self.prompt_token_index, "AnswerTokenIndex=", self.answer_token_index, "Prompt+Answer=", full )
+
+    def print_all(self):
+        print("Feature name:", self.feature_name)
+        if self.feature_name.startswith("Def"):
+            print("Clean statement:", self.create_statement)
+            print("Corrupt statement:", self.corrupt_create_statement)
+        else:
+            print("Clean prompt:", self.english_prompt)
+            print("Corrupt prompt:", self.corrupt_english_prompt)
+        print("Clean token:", self.clean_token_str)
+        print("Corrupt token:", self.corrupt_token_str)
+        print("Prompt token index:", self.prompt_token_index)
+        print("Answer token index:", self.answer_token_index)
+        print("Clean tokenizer index:", self.clean_tokenizer_index)
+        print("Corrupt tokenizer index:", self.corrupt_tokenizer_index)
+        print(self.get_alpaca_prompt().replace('\n', ' '))
+        print(self.sql_statement.replace('\n', ' '))       
 
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, tokenizer = None):
@@ -66,15 +83,18 @@ class CorruptFeatureTestGenerator:
         self.tokenizer = tokenizer
 
         # Sample data to generate variations
-        self.table_names = ["cost", "sales", "inventory", "orders", "products"]
-        self.field_names = ["price", "quantity", "amount", "total", "count", "id"]
-        self.field_types = ["NUMERIC", "INTEGER", "VARCHAR", "TEXT"]
+        # For TinyStories all the table and field names translate to 1 token each.
+        self.clean_table_names = ["cost", "people", "inventory", "orders", "products"]
+        self.corrupt_table_names = ["star", "very", "apple", "blue", "orange"]
+        self.clean_field_names = ["price", "count", "amount", "total", "count", "id"]
+        self.corrupt_field_names = ["hammer", "little", "wolf", "sky", "yellow"]
+        self.clean_field_types = ["NUMERIC", "INTEGER", "VARCHAR", "TEXT"]
     
     def _make_base_item(self) -> BatchItem:
         """Create a random clean base item"""
-        table = random.choice(self.table_names)
-        fields = random.sample(self.field_names, 2)  # Pick 2 random fields
-        types = [random.choice(self.field_types) for _ in fields]
+        table = random.choice(self.clean_table_names)
+        fields = random.sample(self.clean_field_names, 2)  # Pick 2 random fields
+        types = [random.choice(self.clean_field_types) for _ in fields]
         
         return BatchItem(
             command_set=1,
@@ -109,25 +129,26 @@ class CorruptFeatureTestGenerator:
         
         return [generators[feature_name]() for _ in range(batch_size)]
 
-    def tokenize_text(self, text):
-        """Tokenize text and return token"""
-        
+    def tokenize_answer_offset(self):  
         # Llama tokenizes " size" as [128000, 1404] where 128000 is the '<|begin_of_text|>' symbol
         # print(self.tokenizer.convert_ids_to_tokens([128000]))  # Check what `128000` maps to
         # print(self.tokenizer.special_tokens_map)  # Ch
-        answer_offset = 1 if self.model_num == 3 else 0
+        return 1 if self.model_num == 3 else 0
 
+    def tokenize_text(self, text):
+        """Tokenize text and return a token"""       
+        answer_offset = self.tokenize_answer_offset()
         token = self.tokenizer(" " + text)["input_ids"][answer_offset] # includes a space
         return token
 
     def set_clean_corrupt_tokens(self, item: CorruptibleBatchItem, clean_token: str, corrupt_token: str, second_occurrence: bool):
         """Set the clean and corrupt tokens for an item"""
-        item.clean_token = clean_token
-        item.corrupt_token = corrupt_token
+        item.clean_token_str = clean_token
+        item.corrupt_token_str = corrupt_token
 
-        if self.tokenizer is not None:        
-            item.clean_tokenizer_index = self.tokenize_text(clean_token)
-            item.corrupt_tokenizer_index = self.tokenize_text(corrupt_token)
+        if self.tokenizer is not None:      
+            item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
+            item.corrupt_tokenizer_index = self.tokenize_text(item.corrupt_token_str)
 
             # Check the tokens can be tokenized by the tokenizer
             if item.clean_tokenizer_index >= self.tokenizer.vocab_size or item.corrupt_tokenizer_index >= self.tokenizer.vocab_size:
@@ -144,7 +165,7 @@ class CorruptFeatureTestGenerator:
                     if len(occurrences) > 1:
                         item.prompt_token_index = occurrences[1]
                     else:
-                        print( len(occurrences), item.clean_tokenizer_index, clean_token, item.get_alpaca_prompt(), clean_prompt_tokens)
+                        print( len(occurrences), item.clean_tokenizer_index, item.clean_token_str, item.get_alpaca_prompt(), clean_prompt_tokens)
                         raise ValueError("Clean token does not appear twice in the prompt tokens.")
 
                 else:
@@ -155,7 +176,7 @@ class CorruptFeatureTestGenerator:
                 
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        wrong_table = random.choice([t for t in self.table_names if t != base.table_name])
+        wrong_table = random.choice([t for t in self.clean_table_names if t != base.table_name])
         corrupted = base.english_prompt.replace(base.table_name, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGTABLENAME, corrupt_english_prompt=corrupted )
@@ -165,7 +186,7 @@ class CorruptFeatureTestGenerator:
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
         original_field = base.table_fields[0].name
-        wrong_field = random.choice([f for f in self.field_names if f != original_field])
+        wrong_field = random.choice([f for f in self.clean_field_names if f != original_field])
         corrupted = base.english_prompt.replace(original_field, wrong_field)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGFIELDNAME, corrupt_english_prompt=corrupted )
@@ -185,7 +206,7 @@ class CorruptFeatureTestGenerator:
 
     def _corrupt_def_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        wrong_table = random.choice([t for t in self.table_names if t != base.table_name])
+        wrong_table = random.choice([t for t in self.clean_table_names if t != base.table_name])
         corrupted = base.create_statement.replace(base.table_name, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFTABLENAME, corrupt_create_statement=corrupted )
@@ -196,7 +217,7 @@ class CorruptFeatureTestGenerator:
         base = self._make_base_item()
         # Pick a field to corrupt and find a different field name
         original_field = base.table_fields[0].name
-        wrong_field = random.choice([f for f in self.field_names if f != original_field])
+        wrong_field = random.choice([f for f in self.clean_field_names if f != original_field])
         # Replace only in create statement
         corrupted = base.create_statement.replace(original_field, wrong_field)
 
