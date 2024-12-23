@@ -79,25 +79,27 @@ class CorruptibleBatchItem(BatchItem):
         print(self.sql_statement.replace('\n', ' '))       
 
 class CorruptFeatureTestGenerator:
-    def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, tokenizer = None, use_corrupt_names: bool = False):
+    def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, tokenizer = None, use_novel_names: bool = False):
         self.model_num = model_num
         self.cs_num = cs_num
         self.tokenizer = tokenizer
-        self.use_corrupt_names = use_corrupt_names
+        self.use_corrupt_names = use_novel_names
 
         # Sample data to generate variations
         # For TinyStories all these words translate to 1 token each.
         self.clean_table_names = ["cost", "people", "inventory", "orders", "products"]
-        self.corrupt_table_names = ["star", "very", "apple", "blue", "orange"]
-        self.clean_field_names = ["price", "count", "amount", "total", "count", "id"]
-        self.corrupt_field_names = ["hammer", "little", "wolf", "sky", "yellow"]
+        self.novel_table_names = ["star", "very", "apple", "blue", "orange"] # used to corrupt table_name
+        self.clean_field_names = ["price", "count", "amount", "total", "name", "id"]
+        self.novel_field_names = ["hammer", "little", "wolf", "sky", "yellow"] # used to corrupt field_name
         self.clean_field_types = ["INT", "CHAR", "TIME", "TEXT", "JSON"]
     
     def _make_base_item(self) -> BatchItem:
         """Create a random clean base item"""
         table = random.choice(self.clean_table_names)
-        fields = random.sample(self.clean_field_names, 2)  # Pick 2 random fields
+        fields = random.sample(self.clean_field_names, 2)  # Pick 2 random, different field names
         types = [random.choice(self.clean_field_types) for _ in fields]
+
+        assert fields[0] != fields[1]
         
         return BatchItem(
             command_set=1,
@@ -181,7 +183,7 @@ class CorruptFeatureTestGenerator:
                 
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        names = self.corrupt_table_names if self.use_corrupt_names else self.clean_table_names
+        names = self.novel_table_names if self.use_corrupt_names else self.clean_table_names
         wrong_table = random.choice([t for t in names if t != base.table_name])
         corrupted = base.english_prompt.replace(base.table_name, wrong_table)
 
@@ -192,8 +194,9 @@ class CorruptFeatureTestGenerator:
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
         original_field = base.table_fields[0].name
-        names = self.corrupt_field_names if self.use_corrupt_names else self.clean_field_names
-        wrong_field = random.choice([f for f in names if f != original_field])
+        base_fields = [field.name for field in base.table_fields]          
+        names = self.novel_field_names if self.use_corrupt_names else self.clean_field_names
+        wrong_field = random.choice([f for f in names if f not in base_fields])
         corrupted = base.english_prompt.replace(original_field, wrong_field)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGFIELDNAME, corrupt_english_prompt=corrupted )
@@ -213,7 +216,7 @@ class CorruptFeatureTestGenerator:
 
     def _corrupt_def_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        names = self.corrupt_table_names if self.use_corrupt_names else self.clean_table_names        
+        names = self.novel_table_names if self.use_corrupt_names else self.clean_table_names        
         wrong_table = random.choice([t for t in names if t != base.table_name])
         corrupted = base.create_statement.replace(base.table_name, wrong_table)
 
@@ -225,8 +228,9 @@ class CorruptFeatureTestGenerator:
         base = self._make_base_item()
         # Pick a field to corrupt and find a different field name
         original_field = base.table_fields[0].name
-        names = self.corrupt_field_names if self.use_corrupt_names else self.clean_field_names        
-        wrong_field = random.choice([f for f in names if f != original_field])
+        names = self.novel_field_names if self.use_corrupt_names else self.clean_field_names      
+        base_fields = [field.name for field in base.table_fields]  
+        wrong_field = random.choice([f for f in names if f not in base_fields])
         # Replace only in create statement
         corrupted = base.create_statement.replace(original_field, wrong_field)
 
