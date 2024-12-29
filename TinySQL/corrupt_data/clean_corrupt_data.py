@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import List, Optional
 import random
 from TinySQL.training_data.fragments.models import BatchItem, TableField, SelectField
+from TinySQL.training_data.sql_create_table import get_sql_create_table_from_selected_fields
+from TinySQL.training_data.sql_select_from import get_sql_select_from_selected_fields
 
 UNKNOWN_VALUE = -1
 
@@ -95,21 +97,22 @@ class CorruptFeatureTestGenerator:
     
     def _make_base_item(self) -> BatchItem:
         """Create a random clean base item"""
-        table = random.choice(self.clean_table_names)
+        table_name = random.choice(self.clean_table_names)
         fields = random.sample(self.clean_field_names, 2)  # Pick 2 random, different field names
         types = [random.choice(self.clean_field_types) for _ in fields]
 
         assert fields[0] != fields[1]
-        
+        selected_fields=[TableField(f, t) for f, t in zip(fields, types)]
+
         return BatchItem(
             command_set=1,
-            table_name=table,
-            table_fields=[TableField(f, t) for f, t in zip(fields, types)],
-            create_statement=f"CREATE TABLE {table} ( {fields[0]} {types[0]}, {fields[1]} {types[1]} )",
+            table_name=table_name,
+            table_fields=selected_fields,
+            create_statement=get_sql_create_table_from_selected_fields(table_name, selected_fields)[2],
             select=[SelectField(f, "") for f in fields],
             order_by=[],
-            english_prompt=f"show me the {fields[0]} and {fields[1]} from the {table} table",
-            sql_statement=f"SELECT {fields[0]}, {fields[1]} FROM {table}"
+            english_prompt=f"show me the {fields[0]} and {fields[1]} from the {table_name} table",
+            sql_statement=get_sql_select_from_selected_fields(table_name, selected_fields)[1],
         )
 
     def get_generators(self):
@@ -161,8 +164,11 @@ class CorruptFeatureTestGenerator:
                 item.prompt_token_index = UNKNOWN_VALUE
                 item.answer_token_index = UNKNOWN_VALUE 
             else:
-                clean_prompt_tokens = self.tokenizer(item.clean_BatchItem.get_alpaca_prompt())["input_ids"]
-                clean_answer_tokens = self.tokenizer(item.clean_BatchItem.sql_statement)["input_ids"]
+                clean_prompt_str = item.clean_BatchItem.get_alpaca_prompt()
+                clean_answer_str = item.clean_BatchItem.sql_statement  
+                print( "Clean:", clean_prompt_str, clean_answer_str )             
+                clean_prompt_tokens = self.tokenizer(clean_prompt_str)["input_ids"]
+                clean_answer_tokens = self.tokenizer(clean_answer_str)["input_ids"]
 
                 # Tokenize prompt and answer strings to find the index of the clean token in the tokenized strings.
                 if second_occurrence:
