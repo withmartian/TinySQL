@@ -243,8 +243,8 @@ def evaluate_cs1_prediction_score(item, predicted_sql_statement):
 
 # Remove newlines, multiple spaces, leading/trailing spaces and upper case
 def trim_sql_statement(sql_statement: str) -> str:
-    clean_tokens = sql_statement.upper().replace('\n', ' ').strip().split()
-    return ' '.join(clean_tokens)
+    str_list = sql_statement.upper().replace('\n', ' ').strip().split()
+    return ' '.join(str_list)
 
 
 def evaluate_cs1_prediction(item: BatchItem, predicted_sql_statement: str) -> float:

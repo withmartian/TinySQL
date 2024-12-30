@@ -18,11 +18,11 @@ class TestCorruptData(unittest.TestCase):
         for i, example in enumerate(examples, 1):
             print(f"\nExample {i} of {example.feature_name}:")
             if example.feature_name.startswith("Def"):
-                print(f"Clean statement: {example.create_statement}")
-                print(f"Corrupt statement: {example.corrupt_create_statement}")
+                print(f"Clean statement  : {example.create_statement.replace('\n', '\\n')}")
+                print(f"Corrupt statement: {example.corrupt_create_statement.replace('\n', '\\n')}")
             else:
-                print(f"Clean prompt: {example.english_prompt}")
-                print(f"Corrupt prompt: {example.corrupt_english_prompt}")
+                print(f"Clean prompt  : {example.english_prompt.replace('\n', '\\n')}")
+                print(f"Corrupt prompt: {example.corrupt_english_prompt.replace('\n', '\\n')}")
 
             assert example.clean_token_str != ""
             assert example.corrupt_token_str != ""
@@ -49,8 +49,8 @@ class TestCorruptData(unittest.TestCase):
             # PQR TODO This does not work for modelNum==2. Not sure why
             if model_num <= 1: 
                 if corrupt_tokens[example.prompt_token_index] != example.corrupt_tokenizer_index:
-                    print(clean_str.replace('\n', ' '))
-                    print(corrupt_str.replace('\n', ' '))
+                    print(clean_str.replace('\n', '\\n'))
+                    print(corrupt_str.replace('\n', '\\n'))
                     print( "Bad prompt corrupt token:", example.prompt_token_index, example.corrupt_tokenizer_index, corrupt_tokens[example.prompt_token_index], corrupt_tokens)
                     assert False
                 #if corrupt_tokens[example.answer_token_index] != example.corrupt_tokenizer_index:
@@ -81,6 +81,7 @@ class TestCorruptData(unittest.TestCase):
 
         for word in generator.clean_field_types:
             assert len(tokenizer(word)["input_ids"]) == 1
+
 
     def test_m1_generate_ENGTABLENAME(self): 
         self.show_examples(ENGTABLENAME, 1, use_novel_names=False)
