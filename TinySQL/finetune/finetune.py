@@ -239,10 +239,10 @@ def evaluate(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_functio
             else:
                 # Print the incorrect predictions
                 print("--------------------------------------------------")
-                print(f"Instruction {i + idx} {dataset_type} set:\n{sample['english_prompt']}\n")
-                print(f"Context {i + idx} {dataset_type} set:\n{sample['create_statement']}\n")
-                print(f"Ground Truth SQL {i + idx} {dataset_type} set:\n{sample['sql_statement']}\n")
-                print(f"Predicted SQL {i + idx} {dataset_type} set:\n{predicted_sql}\n")
+                print(f"Instruction {i + idx} {dataset_type} set: {sample['english_prompt']}")
+                print(f"Context {i + idx} {dataset_type} set: {sample['create_statement']}")
+                print(f"Ground Truth SQL {i + idx} {dataset_type} set: {sample['sql_statement']}")
+                print(f"Predicted SQL {i + idx} {dataset_type} set: {predicted_sql}")
                 print("--------------------------------------------------")
             total_predictions += 1
             evaluation_score_sum += prediction_score
@@ -352,7 +352,7 @@ def main():
         raise ValueError("Model not supported!")
 
     # Use the alpaca prompt
-    alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
+    alpaca_prompt = """### Instruction: {} ### Context: {} ### Response: """
 
     if args.interactive:
         # Interactive mode

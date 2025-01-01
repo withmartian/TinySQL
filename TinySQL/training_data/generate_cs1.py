@@ -4,7 +4,7 @@ from .fragments.english_select_from import get_english_select_from_phrase
 from .fragments.english_order_by import get_english_order_by_phrase
 from .sql_create_table import get_sql_create_table
 from .sql_select_from import get_sql_select_from
-from .fragments.models import BatchItem, OrderField, SelectField
+from .fragments.models import BatchItem, OrderField, SelectField, trim_newlines_and_multiple_spaces
 
 
 def get_english_order_by(fields: list[OrderField]) -> str:
@@ -241,15 +241,9 @@ def evaluate_cs1_prediction_score(item, predicted_sql_statement):
     return (points_earned_part1+points_earned_part2, total_points_part1+total_points_part2)
 
 
-# Remove newlines, multiple spaces, leading/trailing spaces and upper case
-def trim_sql_statement(sql_statement: str) -> str:
-    str_list = sql_statement.upper().replace('\n', ' ').strip().split()
-    return ' '.join(str_list)
-
-
 def evaluate_cs1_prediction(item: BatchItem, predicted_sql_statement: str) -> float:
 
-    test_sql_statement = trim_sql_statement(predicted_sql_statement)
+    test_sql_statement = trim_newlines_and_multiple_spaces(predicted_sql_statement).upper()
     if test_sql_statement == "":
         return 0.0
 

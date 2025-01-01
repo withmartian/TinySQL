@@ -37,6 +37,11 @@ class OrderField:
     asc: bool
 
 
+# Remove newlines, multiple spaces, leading/trailing spaces 
+def trim_newlines_and_multiple_spaces(statement: str) -> str:
+    str_list = statement.replace('\n', ' ').replace('    ', ' ').replace('   ', ' ').replace('  ', ' ').strip().split()
+    return ' '.join(str_list)
+
 @dataclass
 class BatchItem:
     command_set: int
@@ -61,9 +66,11 @@ class BatchItem:
         print( "SQL:", self.sql_statement )
 
     def get_alpaca_prompt(self):
-        alpaca_prompt = """### Instruction:\n{}\n### Context:\n{}\n### Response:\n"""
+        alpaca_prompt = """### Instruction: {} ### Context: {} ### Response: """
 
         # Substitute the english_prompt and create_statement into the alpaca_prompt
         alpaca_prompt = alpaca_prompt.format(self.english_prompt, self.create_statement)
+
+        alpaca_prompt = trim_newlines_and_multiple_spaces(alpaca_prompt) + " "
 
         return alpaca_prompt

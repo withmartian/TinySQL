@@ -1,6 +1,6 @@
 import random
 from .fragments.field_names import get_sql_select_fields
-from .fragments.models import SelectField, TableField
+from .fragments.models import SelectField, TableField, trim_newlines_and_multiple_spaces
 
 
 def get_sql_select_from_selected_fields(table_name, selected_fields):
@@ -26,8 +26,10 @@ def get_sql_select_from_selected_fields(table_name, selected_fields):
     if len(formatted_fields) == 1:
         sql = f"SELECT {formatted_fields[0]} FROM {table_name}"
     else:
-        sql = "SELECT\n    " + ",\n    ".join(formatted_fields) + f"\nFROM {table_name}"
+        sql = "SELECT " + ", ".join(formatted_fields) + f" FROM {table_name}"
     
+    sql = trim_newlines_and_multiple_spaces(sql)
+
     return (selected_fields, sql)
 
 
