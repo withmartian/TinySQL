@@ -2,7 +2,7 @@ from .sql_create_table import get_sql_create_table
 from .sql_select_from import get_sql_select_from
 from .sql_order_by import get_sql_order_by
 from .fragments.models import BatchItem
-from .generate_cs1 import evaluate_cs1_prediction_score, get_english_select_from, get_english_order_by, trim_sql_statement, evaluate_unrecognised_words
+from .generate_cs1 import evaluate_cs1_prediction_score, get_english_select_from, get_english_order_by, trim_newlines_and_multiple_spaces, evaluate_unrecognised_words
 
 
 # Generate a batch of "command set 2" prompts and answers: SELECT xx FROM yy ORDER BY zz DESC
@@ -82,7 +82,7 @@ def evaluate_cs2_prediction_score(item: BatchItem, predicted_sql_statement: str)
 
 def evaluate_cs2_prediction(item: BatchItem, predicted_sql_statement: str) -> float:
 
-    test_sql_statement = trim_sql_statement(predicted_sql_statement)
+    test_sql_statement = trim_newlines_and_multiple_spaces(predicted_sql_statement).upper()
     if test_sql_statement == "":
         return 0.0
     

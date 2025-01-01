@@ -1,6 +1,6 @@
 import random
 from typing import Tuple
-from .fragments.models import OrderField, TableField
+from .fragments.models import OrderField, TableField, trim_newlines_and_multiple_spaces
 
 
 def get_sql_order_by(table_fields : list[TableField]) -> Tuple[list[OrderField], str]:
@@ -31,6 +31,8 @@ def get_sql_order_by(table_fields : list[TableField]) -> Tuple[list[OrderField],
     
     # Build the SELECT statement with proper formatting
     # Add newlines and indentation for better readability
-    sql = "ORDER BY\n    " + ",\n    ".join(formatted_fields)
+    sql = "ORDER BY " + ", ".join(formatted_fields)
     
+    sql = trim_newlines_and_multiple_spaces(sql)
+
     return (order_by_fields, sql)
