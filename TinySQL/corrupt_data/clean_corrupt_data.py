@@ -56,17 +56,17 @@ class CorruptibleBatchItem(BatchItem):
     
     def print_clean(self):
         full = self.clean_BatchItem.get_alpaca_prompt() + self.clean_BatchItem.sql_statement 
-        print( "Clean: Token=", self.clean_token_str, "TokenizerIndex=", self.clean_tokenizer_index, "PromptTokenIndex=", self.prompt_token_index, "AnswerTokenIndex=", self.answer_token_index, "Prompt+Answer=", full.replace('\n', '\\n') )
+        print( "Clean: Token=", self.clean_token_str, "TokenizerIndex=", self.clean_tokenizer_index, "PromptTokenIndex=", self.prompt_token_index, "AnswerTokenIndex=", self.answer_token_index, "Prompt+Answer=", full )
 
     def print_corrupt(self):
         full = self.corrupt_BatchItem.get_alpaca_prompt() + self.corrupt_BatchItem.sql_statement
-        print( "Corrupt: Token=", self.corrupt_token_str, "TokenizerIndex=", self.corrupt_tokenizer_index, "PromptTokenIndex=", self.prompt_token_index, "AnswerTokenIndex=", self.answer_token_index, "Prompt+Answer=", full.replace('\n', '\\n') )
+        print( "Corrupt: Token=", self.corrupt_token_str, "TokenizerIndex=", self.corrupt_tokenizer_index, "PromptTokenIndex=", self.prompt_token_index, "AnswerTokenIndex=", self.answer_token_index, "Prompt+Answer=", full )
 
     def print_all(self):
         print("Feature name:", self.feature_name)
         if self.feature_name.startswith("Def"):
-            print("Clean statement:", self.create_statement.replace('\n', '\\n') )
-            print("Corrupt statement:", self.corrupt_create_statement.replace('\n', '\\n') )
+            print("Clean statement:", self.create_statement )
+            print("Corrupt statement:", self.corrupt_create_statement )
         else:
             print("Clean prompt:", self.english_prompt)
             print("Corrupt prompt:", self.corrupt_english_prompt)
@@ -77,8 +77,8 @@ class CorruptibleBatchItem(BatchItem):
         print("Answer token index:", self.answer_token_index)
         print("Clean tokenizer index:", self.clean_tokenizer_index)
         print("Corrupt tokenizer index:", self.corrupt_tokenizer_index)
-        print(self.get_alpaca_prompt().replace('\n', '\\n'))
-        print(self.sql_statement.replace('\n', '\\n'))       
+        print(self.get_alpaca_prompt())
+        print(self.sql_statement)       
 
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, tokenizer = None, use_novel_names: bool = False):
@@ -183,7 +183,7 @@ class CorruptFeatureTestGenerator:
                     item.prompt_token_index = clean_prompt_tokens.index(item.clean_tokenizer_index)
 
                 # Token position in the predicted answer of the token that may be corrupted
-                item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index)
+                item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
 
                 
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:

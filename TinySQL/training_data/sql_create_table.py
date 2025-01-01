@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 from .fragments.table_names import get_sql_table_name
 from .fragments.field_names import get_sql_table_fields
-from .fragments.models import TableField
+from .fragments.models import TableField, trim_newlines_and_multiple_spaces
 
 
 def get_sql_create_table_from_selected_fields(table_name, selected_fields : List[TableField]) -> Tuple[str, List[Tuple[str, str]], str]:
@@ -24,13 +24,14 @@ def get_sql_create_table_from_selected_fields(table_name, selected_fields : List
     # Add columns
     column_definitions = []
     for field in selected_fields:
-        column_definitions.append(f"    {field.name} {field.type}")
+        column_definitions.append(f" {field.name} {field.type}")
        
     # Combine all parts
-    sql_parts.append(",\n".join(column_definitions))
+    sql_parts.append(", ".join(column_definitions))
     sql_parts.append(" )")
-    
-    return (table_name, selected_fields, "\n".join(sql_parts))
+    sql_statement = trim_newlines_and_multiple_spaces(" ".join(sql_parts))
+
+    return (table_name, selected_fields, sql_statement)
 
 
 

@@ -1,5 +1,5 @@
 from .fragments.models import BatchItem
-from .generate_cs1 import evaluate_cs1_prediction_score_part1, trim_sql_statement, evaluate_unrecognised_words
+from .generate_cs1 import evaluate_cs1_prediction_score_part1, trim_newlines_and_multiple_spaces, evaluate_unrecognised_words
 from .generate_cs2 import evaluate_cs2_prediction_score, generate_cs2
 
 
@@ -81,7 +81,7 @@ def evaluate_cs3_prediction_score(item: BatchItem, predicted_sql_statement: str)
 
 def evaluate_cs3_prediction(item: BatchItem, predicted_sql_statement: str) -> float:
 
-    test_sql_statement = trim_sql_statement(predicted_sql_statement)
+    test_sql_statement = trim_newlines_and_multiple_spaces(predicted_sql_statement).upper()
     if test_sql_statement == "":
         return 0.0
     
