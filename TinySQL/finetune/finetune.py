@@ -507,7 +507,7 @@ def main():
         )
 
         # Train the model and evaluate on the validation set
-        trainer.evaluate()
+        # trainer.evaluate()
         trainer.train()
         trainer.evaluate()
 
