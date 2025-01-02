@@ -18,10 +18,10 @@ def sql_interp_model_location( model_num : int, cs_num : int):
             return "roneneldan/TinyStories-Instruct-2Layers-33M"
 
         elif cs_num == 1:
-            return "withmartian/sql_interp_bm1_cs1_experiment_1.6"
+            return "withmartian/sql_interp_bm1_cs1_experiment_1.7"
  
         elif cs_num == 2:
-            return "withmartian/sql_interp_bm1_cs2_experiment_2.6"
+            return "withmartian/sql_interp_bm1_cs2_experiment_2.7"
 
         elif cs_num == 3:
             return "withmartian/sql_interp_bm1_cs3_experiment_3.6"
