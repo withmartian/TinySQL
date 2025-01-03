@@ -559,49 +559,58 @@ categorical_seed_columns:
 generated_data_columns:
   - name: column_names
     generation_prompt: >-
-      Generate a list of 1 to 6 realistic SQL column names for the table '{table_name}'.
-      Each column name should be in snake_case, relevant to the table's content, and should not include any additional text or formatting.
-      Examples:
-        - For "users": "user_id", "username", "email", "created_at", "last_login", "is_active"
-        - For "orders": "order_id", "customer_id", "total_amount", "order_date", "status", "shipping_address"
-        - For "employees": "salary", "age", "department_id", "hire_date", "job_title", "is_manager"
-        - For "products": "product_name", "price", "stock_quantity", "category_id", "created_at", "is_active"
-      Do not include any additional text or formatting.
-      Ensure these column names will be used exactly as generated.
+      Generate {{num_columns}} realistic SQL column names for the table '{table_name}'.
+      Ensure the chosen column name can be used as is in the SQL query, and that it differs clearly from '{table_name}'.
+
+      Important Guidelines:
+        * The column name must be in snake_case like "total_amount" or "created_at".
+        * It should be relevant to the type of entities in '{table_name}'.
+        * Avoid overly similar or derived forms of the table name. Choose distinct attributes.
+        * Use a common, domain-specific attribute unrelated directly to the table_name. For instance:
+          - For "users": "email", "created_at", "last_login", "status", "age"
+          - For "orders": "order_date", "total_amount", "customer_id", "status"
+          - For "employees": "salary", "age", "department_id", "hire_date", "job_title"
+        * If asked for multiple columns, ensure they are distinct and seperate by commas.
+        * Do not include any additional text or formatting.
 
     columns_to_list_in_prompt: [table_name]
 
   - name: selected_columns
     generation_prompt: >-
-      From the list of column names '{column_names}', randomly select 1 to 3 columns 
-      to include in the SQL query.
+      From the column names '{column_names}', randomly select {{num_selected_columns}} column{{plural}} to include in the SQL query.
+      Include just the selected column names (separated by commas if multiple).
+
+      Important Guidelines:
+        * Do not add or remove characters; use the columns exactly as provided.
+        * Do not include any additional text or formatting.
+        * Do not include 'selected columns' in the response.
 
     columns_to_list_in_prompt: [column_names]
 
   - name: column_data_types
     generation_prompt: >-
-      Suggest appropriate SQL numeric data types (e.g., INT, FLOAT, DECIMAL) for each column 
-      in '{column_names}'. Provide a list matching each column to its data type. 
-      For non-numeric columns (like names or descriptions), you may use VARCHAR(255).
-      Do not include any additional text or formatting.
+      Suggest appropriate SQL numeric data types (e.g., INT, FLOAT, DECIMAL, VARCHAR(255)) for {{num_columns}} in '{column_names}' in the table '{table_name}'. 
+      Do not include any additional text or formatting. Do not include any column names, just the {{num_columns}} data types (separated by commas if multiple).
 
     columns_to_list_in_prompt: [column_names]
 
   - name: sql_prompt
     generation_prompt: >-
-      Generate a natural language instruction for a SQL query to select '{selected_columns}' from '{table_name}'.
+      Generate a clear and concise natural language instruction for a SQL query to select '{selected_columns}' from '{table_name}'. 
       The instruction should begin with the phrase '{instruction_phrase}' and should NOT use the exact snake_case column names or table name.
-      Instead, use natural language variations, synonyms, or descriptive phrases. 
+      Instead, use natural language variations, synonyms, or descriptive phrases.
       For example:
         - If the table_name is "employees" and selected columns are "age" and "salary", 
           you might say: "What do the staff members earn and how old are they?" 
           rather than "What is the age and salary from employees?"
+        - For a table_name "commodity_prices", you might say "commodity prices", "Commodity Prices", "commodityPrices", "CommodityPrices", or "commodity_prices".
+        - For a column_name "commodity_id", you might say "commodity id", "commodityId", "Commodity ID", "commodity_id".
 
       Important Guidelines:
-        * Do not use the exact snake_case names directly in the prompt. For instance, if the column is "salary", you might refer to it as "what they earn" or "their compensation".
-        * Do not use the exact table name "employees" directly, instead say something like "our staff roster", "the team records", or "the personnel list".
         * The instruction should remain clear, but it's allowed to be more indirect or human-readable.
-        * Do not include any additional formatting beyond the instruction itself.
+        * When referring to the table and column in this instruction, you may use natural language variations.
+        * The goal is to present the table and column in a variety of human-readable or commonly used naming styles, not strictly following snake_case.
+        * Do not include any additional text or formatting beyond the instruction itself.
 
     columns_to_list_in_prompt: [instruction_phrase, selected_columns, table_name]
 
@@ -612,23 +621,23 @@ generated_data_columns:
       and should not include any additional text or formatting.
 
       Important Guidelines:
+        * Use the provided '{table_name}' and '{column_names}' exactly.
         * Include all columns from '{column_names}'.
-        * Use the given '{table_name}' exactly.
-        * Assign each column the corresponding data type from '{column_data_types}'.
-        * Do not include any additional text, comments, or formatting outside of the statement.
+        * Match each column to the corresponding data type from '{column_data_types}'.
+        * Do not include any additional text or formatting other than the SQL statement itself.
 
     columns_to_list_in_prompt: [table_name, column_names, column_data_types]
     llm_type: code
 
   - name: sql
     generation_prompt: >-
-      Write the SQL query that selects '{selected_columns}' from '{table_name}' as per the idea described in '{sql_prompt}'.
+      Write the SQL query that selects '{selected_columns}' from '{table_name}' as per the instruction '{sql_prompt}'.
 
       Important Guidelines:
-        * Although the prompt used natural language variations, the actual SQL must use the exact snake_case names '{table_name}' and '{selected_columns}'.
-        * The query should select exactly the chosen columns.
-        * Do not include any additional text or formatting outside of the query itself.
-        * The query should semantically respond to the prompt's request, but does not need to match it literally, as this is a "Not Exact Match" scenario.
+        * The SQL query must use the exact snake_case names '{table_name}' and each of '{selected_columns}'.
+        * The query should select columns as indicated by '{selected_columns}'.
+        * Do not include any additional text or formatting.
+        * The query must match the instruction's intent and names exactly.
 
     columns_to_list_in_prompt: [sql_prompt, selected_columns, table_name]
     llm_type: code

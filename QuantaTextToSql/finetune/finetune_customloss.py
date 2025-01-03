@@ -110,7 +110,7 @@ def interactive_mode(args, alpaca_prompt, model, tokenizer):
             # Generate the response
             response = text_generator(
                 prompt,
-                max_new_tokens=1000,
+                max_new_tokens=100,
                 temperature=0.7,
                 top_p=0.9,
                 do_sample=True,
@@ -203,7 +203,7 @@ def evaluate(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_functio
         generated_ids = model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            max_new_tokens=1000,
+            max_new_tokens=100,
             temperature=0.5,
             top_p=0.9,
             eos_token_id=tokenizer.eos_token_id,
@@ -230,13 +230,8 @@ def evaluate(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_functio
             item = dict_to_batchitem(sample)
 
             # Evaluate the predicted SQL
-            #TODO: Fix this
-            predicted_sql = predicted_sql.replace(";", "")
-            gt_sql = sample['sql_statement'].replace(";", "")
-            #sample['sql_statement'] = sample['sql_statement'].replace(";", "")
             prediction_score = evaluate_cs_function(item, predicted_sql)
-            #label_score = evaluate_cs_function(item, sample['sql_statement'])
-            label_score = evaluate_cs_function(item, gt_sql)
+            label_score = evaluate_cs_function(item, sample['sql_statement'])
 
             # Update counters and sums
             if prediction_score == 1.00:
@@ -274,6 +269,80 @@ def evaluate(args, dataset, model, tokenizer, alpaca_prompt, evaluate_cs_functio
         }
     )
 
+class CustomSFTTrainer(SFTTrainer):
+    def __init__(self, *args, evaluate_cs_function=None, tokenizer=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if evaluate_cs_function is None:
+            raise ValueError("An evaluate_cs_function must be provided!")
+        if tokenizer is None:
+            raise ValueError("A tokenizer must be provided!")
+        self.evaluate_cs_function = evaluate_cs_function
+        self.tokenizer = tokenizer
+
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        labels = inputs.get("labels")
+        input_ids = inputs.get("input_ids")
+        attention_mask = inputs.get("attention_mask")
+
+        # Forward pass to compute cross-entropy loss
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+        ce_loss = outputs.loss
+
+        # Generate predictions using model.generate
+        generated_ids = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            max_new_tokens=100,
+            temperature=0.7,
+            top_p=0.9,
+            pad_token_id=self.tokenizer.pad_token_id,
+            eos_token_id=self.tokenizer.eos_token_id,
+        )
+
+        # Extract prompts length for each sample
+        prompts_lengths = [input_id.size(0) for input_id in input_ids]
+
+        # Initialize lists to store decoded responses
+        predicted_responses = []
+        ground_truth_responses = []
+
+        # Loop over each sample in the batch
+        for i in range(len(generated_ids)):
+            prompt_length = prompts_lengths[i]
+            # Extract generated tokens after the prompt
+            gen_response_ids = generated_ids[i][prompt_length:]
+
+            # Decode predicted response
+            pred_response = self.tokenizer.decode(gen_response_ids, skip_special_tokens=True).strip()
+            predicted_responses.append(pred_response)
+
+            # Extract ground truth response tokens (excluding padding)
+            label_ids = labels[i][labels[i] != -100]
+            # Skip the prompt tokens
+            gt_response_ids = label_ids[prompt_length:]
+            gt_response = self.tokenizer.decode(gt_response_ids, skip_special_tokens=True).strip()
+            ground_truth_responses.append(gt_response)
+
+        # Compute evaluation scores using evaluate_cs_function
+        import ipdb; ipdb.set_trace()
+        evaluation_scores = []
+        for pred_response, gt_response in zip(predicted_responses, ground_truth_responses):
+            # Prepare the item for evaluation
+            item = dict_to_batchitem({"sql_statement": gt_response})
+            score = self.evaluate_cs_function(item, pred_response)
+            evaluation_scores.append(score)
+
+        # Convert scores to a tensor
+        evaluation_scores_tensor = torch.tensor(evaluation_scores, device=ce_loss.device)
+
+        # Calculate evaluation loss (penalty for deviation)
+        evaluation_loss = 1.0 - evaluation_scores_tensor.mean()
+
+        # Combine CE loss and evaluation loss
+        combined_loss = ce_loss + 0.1 * evaluation_loss  # Adjust the scaling factor as needed
+
+        return (combined_loss, outputs) if return_outputs else combined_loss
+
 def main():
     # Parse the arguments
     args = parse_args()
@@ -305,18 +374,8 @@ def main():
     # Decide evaluation function based on the dataset
     if "withmartian/cs1_dataset" in args.dataset_name:
         evaluate_cs_function = evaluate_cs1_prediction
-    elif "withmartian/cs11_dataset" in args.dataset_name:
-        evaluate_cs_function = evaluate_cs1_prediction
-    elif "withmartian/cs12_dataset" in args.dataset_name:
-        evaluate_cs_function = evaluate_cs1_prediction
-    elif "withmartian/cs13_dataset" in args.dataset_name:
-        evaluate_cs_function = evaluate_cs1_prediction
-    elif "withmartian/cs11_valid" in args.dataset_name:
-        evaluate_cs_function = evaluate_cs1_prediction
     elif "withmartian/cs2_dataset" in args.dataset_name:
         evaluate_cs_function = evaluate_cs2_prediction
-    elif "withmartian/cs12_valid" in args.dataset_name:
-        evaluate_cs_function = evaluate_cs1_prediction
     elif "withmartian/cs3_dataset" in args.dataset_name:
         evaluate_cs_function = evaluate_cs3_prediction
     else:
@@ -351,12 +410,11 @@ def main():
         model.config.pad_token_id = tokenizer.pad_token_id
         model.resize_token_embeddings(len(tokenizer))
         eval_batch_size = 256
-    #TODO: Fix this
-    elif "TinyStories" in args.model_name:
+    elif "roneneldan/TinyStories-Instruct-" in args.model_name:
         # tiny-stories model
         model = AutoModelForCausalLM.from_pretrained(
             args.model_name,
-            torch_dtype=torch.float32,
+            torch_dtype=torch.bfloat16,
             device_map="auto",
         )
         tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
@@ -397,8 +455,8 @@ def main():
     if args.finetune:
         # Load datasets
         train_dataset = load_dataset(args.dataset_name, split="train")
-        val_dataset = load_dataset(args.dataset_name, split="validation")
-        test_dataset = load_dataset(args.dataset_name, split="test")
+        val_dataset = load_dataset(args.dataset_name, split="validation[:1%]")
+        test_dataset = load_dataset(args.dataset_name, split="test[:1%]")
 
         # Preprocess the dataset
         def preprocess_function(examples):
@@ -484,13 +542,23 @@ def main():
         )
 
         # Initialize the trainer
-        trainer = SFTTrainer(
+        # trainer = SFTTrainer(
+        #     model=model,
+        #     args=training_args,
+        #     train_dataset=train_dataset_processed,
+        #     eval_dataset=val_dataset_processed,
+        #     tokenizer=tokenizer,
+        #     max_seq_length=args.max_seq_length,
+        # )
+
+        trainer = CustomSFTTrainer(
             model=model,
             args=training_args,
             train_dataset=train_dataset_processed,
             eval_dataset=val_dataset_processed,
             tokenizer=tokenizer,
             max_seq_length=args.max_seq_length,
+            evaluate_cs_function=evaluate_cs_function,
         )
 
         # Add evaluation callback to the trainer for validation
@@ -523,7 +591,7 @@ def main():
         )
 
         # Train the model and evaluate on the validation set
-        trainer.evaluate()
+        #trainer.evaluate()
         trainer.train()
         trainer.evaluate()
 

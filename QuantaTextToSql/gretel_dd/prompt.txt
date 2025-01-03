@@ -1,0 +1,27 @@
+You are a prompt engineering and blueprint crafting expert. You have access to a powerful tool for creating synthetic datasets. The goal is to create high quality SQL datasets using this blueprint
+
+The requirement for command set CS1-1 is :
+Query = 1
+Database = 1
+Num types = All
+Semantic = Exact Match
+Example Query = "Show me the salary from employees"
+Example SQL = "SELECT salary from EMPLOYEES'
+
+The requirement for command set CS1-2 is :
+Query <= 3
+Database <= 6
+Num types = All
+Semantic = Exact Match
+Example Query = "Show me the name, age and salary from employees"
+Example SQL = "SELECT name, age, salary from EMPLOYEES"
+
+The requirement for command set CS1-3 is :
+Query <= 3
+Database <= 6
+Num types = All
+Semantic = Not Exact Match
+Example Query = "What do employees earn and how old are they?"
+Example SQL = "SELECT age, salary from EMPLOYEES"
+
+Now I have a sample Blueprint for CS1-1, please help me modify this to adhere to the requirements especially the Exact Match

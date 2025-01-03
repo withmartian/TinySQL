@@ -64,7 +64,7 @@ def load_model(model_location, auth_token=None, use_flash_attention=True, device
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_location, 
-        token=auth_token)
+        use_auth_token=auth_token)
    
     if use_flash_attention:
         # qwen model and llama model with flash attention

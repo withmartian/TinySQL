@@ -24,3 +24,6 @@ QuantaTextToSql/__pycache__/
 training_data_old/
 
 tests/__pycache__/*
+
+
+old/
