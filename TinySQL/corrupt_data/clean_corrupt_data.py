@@ -6,7 +6,6 @@ from TinySQL.training_data.sql_create_table import get_sql_create_table_from_sel
 from TinySQL.training_data.sql_select_from import get_sql_select_from_selected_fields
 
 UNKNOWN_VALUE = -1
-
 ENGTABLENAME = "EngTableName"
 ENGFIELDNAME = "EngFieldName"
 DEFCREATETABLE = "DefCreateTable"
@@ -81,38 +80,55 @@ class CorruptibleBatchItem(BatchItem):
         print(self.sql_statement)       
 
 class CorruptFeatureTestGenerator:
-    def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, tokenizer = None, use_novel_names: bool = False):
+    def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, 
+                 tokenizer = None, use_novel_names: bool = False, use_order_by: bool = False):
         self.model_num = model_num
         self.cs_num = cs_num
         self.tokenizer = tokenizer
         self.use_corrupt_names = use_novel_names
-
-        # Sample data to generate variations
-        # For TinyStories all these words translate to 1 token each.
+        self.use_order_by = use_order_by
+        
+        # Original sample data
         self.clean_table_names = ["cost", "people", "inventory", "orders", "products"]
-        self.novel_table_names = ["star", "very", "apple", "blue", "orange"] # used to corrupt table_name
+        self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
         self.clean_field_names = ["price", "count", "amount", "total", "name", "id"]
-        self.novel_field_names = ["hammer", "little", "wolf", "sky", "yellow"] # used to corrupt field_name
+        self.novel_field_names = ["hammer", "little", "wolf", "sky", "yellow"]
         self.clean_field_types = ["INT", "CHAR", "TIME", "TEXT", "JSON"]
+        
+        self.directions = ["ASC", "DESC"]
     
     def _make_base_item(self) -> BatchItem:
-        """Create a random clean base item"""
+        """Create a random clean base item with optional ORDER BY support"""
         table_name = random.choice(self.clean_table_names)
-        fields = random.sample(self.clean_field_names, 2)  # Pick 2 random, different field names
+        fields = random.sample(self.clean_field_names, 2)
         types = [random.choice(self.clean_field_types) for _ in fields]
-
+        
         assert fields[0] != fields[1]
-        selected_fields=[TableField(f, t) for f, t in zip(fields, types)]
-
+        selected_fields = [TableField(f, t) for f, t in zip(fields, types)]
+        
+        order_by_clause = ""
+        order_by_english = ""
+        order_by_fields = []
+        
+        if self.use_order_by:
+            order_by_field = random.choice(fields)
+            direction = random.choice(self.directions)
+            order_by_clause = f" ORDER BY {order_by_field} {direction}"
+            order_by_english = f" ordered by {order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
+            order_by_fields = [SelectField(order_by_field, direction)]
+        
+        english_prompt = f"show me the {fields[0]} and {fields[1]} from the {table_name} table{order_by_english}"
+        sql_statement = f"SELECT {fields[0]}, {fields[1]} FROM {table_name}{order_by_clause}"
+        
         return BatchItem(
-            command_set=1,
+            command_set=2 if self.use_order_by else 1,
             table_name=table_name,
             table_fields=selected_fields,
             create_statement=get_sql_create_table_from_selected_fields(table_name, selected_fields)[2],
             select=[SelectField(f, "") for f in fields],
-            order_by=[],
-            english_prompt=f"show me the {fields[0]} and {fields[1]} from the {table_name} table",
-            sql_statement=get_sql_select_from_selected_fields(table_name, selected_fields)[1],
+            order_by=order_by_fields,
+            english_prompt=english_prompt,
+            sql_statement=sql_statement
         )
 
     def get_generators(self):
@@ -125,7 +141,6 @@ class CorruptFeatureTestGenerator:
             DEFFIELDSEPARATOR: self._corrupt_def_field_separator,
             DEFFIELDNAME: self._corrupt_def_field_name
         }
-        
         return generators
 
     def generate_feature_examples(self, feature_name: str, batch_size: int = 5) -> List[CorruptibleBatchItem]:
@@ -253,4 +268,3 @@ class CorruptFeatureTestGenerator:
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFFIELDSEPARATOR, corrupt_create_statement=corrupted )   
         self.set_clean_corrupt_tokens(item, ",", wrong_separator, True)         
         return item
- 
