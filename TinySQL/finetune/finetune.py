@@ -28,7 +28,7 @@ from TinySQL.training_data.generate_cs1 import evaluate_cs1_prediction
 from TinySQL.training_data.generate_cs2 import evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import evaluate_cs3_prediction
 
-MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2-0.5B-Instruct",]
+MODELS_WITH_FLASH_ATTENTION = ["meta-llama/Llama-3.2-1B-Instruct", "Qwen/Qwen2.5-0.5B-Instruct",]
 
 # Arguments for the script
 def parse_args():
@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument("--wandb_project", type=str, default="sql_interp", help="W&B project name")
     parser.add_argument("--wandb_run_name", type=str, default="debug", help="W&B run name")
     parser.add_argument("--wandb_entity", type=str, default="dhruv-gretel", help="W&B entity name")
-    parser.add_argument("--wandb_organization", type=str, default="dhruvnathawani", help="W&B organization name")
+    parser.add_argument("--hf_organization", type=str, default="withmartian", help="W&B organization name")
 
     # Modes are mutually exclusive, set either one of evaluate, interactive, or finetune
     mode_group = parser.add_mutually_exclusive_group(required=True)
@@ -348,6 +348,18 @@ def main():
         model.config.pad_token_id = tokenizer.pad_token_id
         model.resize_token_embeddings(len(tokenizer))
         eval_batch_size = 256
+    elif "bm1" in args.model_name and "cs" in args.model_name:
+        # bm model
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model_name,
+            torch_dtype=torch.float32,
+            device_map="auto",
+        )
+        tokenizer.add_special_tokens({'pad_token': '<|pad|>'})
+        model.resize_token_embeddings(len(tokenizer))
+        model.config.pad_token_id = tokenizer.pad_token_id
+        model.resize_token_embeddings(len(tokenizer))
+        eval_batch_size = 256
     else:
         raise ValueError("Model not supported!")
 
@@ -528,7 +540,7 @@ def main():
         model.save_pretrained(args.output_dir)
         tokenizer.save_pretrained(args.output_dir)
         print(f"Model and tokenizer saved in {args.output_dir}")
-        push_model_to_hf(args.output_dir, args.wandb_run_name, args.wandb_organization)
+        push_model_to_hf(args.output_dir, args.wandb_run_name, args.hf_organization)
         
         # Finish the W&B run
         wandb.finish()
