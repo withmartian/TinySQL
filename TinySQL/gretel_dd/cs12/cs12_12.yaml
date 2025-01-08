@@ -1,0 +1,1196 @@
+model_suite: apache-2.0
+
+special_system_instructions: >-
+  You are an SQL expert. Your role is to write SQL prompts, SELECT statements, and CREATE TABLE statements.
+
+categorical_seed_columns:
+  - name: table_name
+    values:
+      - users
+      - user_profiles
+      - user_preferences
+      - user_settings
+      - user_roles
+      - user_permissions
+      - user_sessions
+      - user_logs
+      - user_activity
+      - user_metrics
+      - accounts
+      - roles
+      - permissions
+      - auth_tokens
+      - login_attempts
+      - password_reset_tokens
+      - access_logs
+      - security_events
+      - posts
+      - articles
+      - comments
+      - categories
+      - tags
+      - media
+      - attachments
+      - documents
+      - pages
+      - content_revisions
+      - products
+      - product_categories
+      - product_variants
+      - inventory
+      - orders
+      - order_items
+      - order_status
+      - shopping_cart
+      - cart_items
+      - wishlist
+      - prices
+      - discounts
+      - promotions
+      - coupons
+      - customers
+      - customer_addresses
+      - customer_preferences
+      - customer_support_tickets
+      - feedback
+      - complaints
+      - reviews
+      - ratings
+      - transactions
+      - payments
+      - payment_methods
+      - invoices
+      - invoice_items
+      - refunds
+      - subscriptions
+      - subscription_plans
+      - billing_cycles
+      - payment_history
+      - shipping_addresses
+      - shipping_methods
+      - shipping_zones
+      - shipping_rates
+      - delivery_status
+      - tracking_info
+      - employees
+      - departments
+      - positions
+      - salary_info
+      - attendance
+      - leave_requests
+      - performance_reviews
+      - training_records
+      - messages
+      - conversations
+      - chat_rooms
+      - notifications
+      - email_templates
+      - sms_logs
+      - push_notifications
+      - page_views
+      - events
+      - event_logs
+      - metrics
+      - analytics_data
+      - user_behavior
+      - conversion_funnel
+      - ab_test_results
+      - countries
+      - regions
+      - cities
+      - addresses
+      - locations
+      - geo_data
+      - zip_codes
+      - postal_codes
+      - settings
+      - configurations
+      - system_logs
+      - error_logs
+      - audit_trail
+      - cache
+      - jobs
+      - queues
+      - scheduled_tasks
+      - followers
+      - following
+      - friend_requests
+      - relationships
+      - groups
+      - group_members
+      - social_connections
+      - blog_posts
+      - blog_categories
+      - blog_tags
+      - authors
+      - publications
+      - drafts
+      - revisions
+      - projects
+      - tasks
+      - milestones
+      - assignments
+      - time_tracking
+      - resources
+      - project_members
+      - sprints
+      - event_attendees
+      - calendars
+      - appointments
+      - schedules
+      - reminders
+      - bookings
+      - faq
+      - help_articles
+      - support_tickets
+      - knowledge_base
+      - tutorials
+      - documentation
+      - warehouses
+      - stock_items
+      - suppliers
+      - purchase_orders
+      - stock_movements
+      - inventory_adjustments
+      - images
+      - videos
+      - audio
+      - albums
+      - galleries
+      - playlists
+      - media_metadata
+      - reports
+      - report_templates
+      - dashboards
+      - statistics
+      - analytics
+      - insights
+      - blacklist
+      - whitelist
+      - ip_blocks
+      - security_rules
+      - firewall_logs
+      - vulnerability_scans
+      - api_keys
+      - webhooks
+      - external_services
+      - integrations
+      - sync_logs
+      - vendors
+      - partners
+      - affiliates
+      - contracts
+      - agreements
+      - policies
+      - test_cases
+      - test_results
+      - test_runs
+      - test_suites
+      - bug_reports
+      - qa_metrics
+      - devices
+      - device_logs
+      - device_tokens
+      - device_settings
+      - mobile_devices
+      - translations
+      - languages
+      - locales
+      - currency_rates
+      - time_zones
+      - temp_data
+      - cache_items
+      - session_data
+      - migrations
+      - backups
+      - campaigns
+      - marketing_emails
+      - subscribers
+      - mailing_lists
+      - leads
+      - conversions
+      - activity_logs
+      - change_logs
+      - debug_logs
+      - error_reports
+      - performance_logs
+      - versions
+      - changelog
+      - releases
+      - patches
+      - updates
+      - sales
+      - logs
+      - invoices
+      - shipments
+      - likes
+      - configuration
+      - parameters
+      - exceptions
+      - debug
+      - phases
+      - steps
+      - stages
+      - materials
+      - equipment
+      - sku
+      - stock
+      - purchases
+      - receipts
+      - returns
+      - tracking
+      - delivery
+      - logistics
+      - carriers
+      - stores
+      - outlets
+      - zipcodes
+      - phones
+      - emails
+      - social_media
+      - avatars
+      - identities
+      - authentication
+      - authorization
+      - access_control
+      - history
+      - changes
+      - snapshots
+      - archives
+      - cookies
+      - temp
+      - queue
+      - cron
+      - schedule
+      - sms
+      - push_notifications
+      - marketing
+      - ads
+      - banners
+      - offers
+      - codes
+      - loyalty
+      - rewards
+      - points
+      - achievements
+      - badges
+      - levels
+      - ranks
+      - scores
+      - leaderboards
+      - charts
+      - graphs
+      - datasets
+      - sources
+      - feeds
+      - imports
+      - exports
+      - transformations
+      - mappings
+      - schemas
+      - models
+      - entities
+      - attributes
+      - relations
+      - indexes
+      - constraints
+      - triggers
+      - functions
+      - procedures
+      - rules
+      - statuses
+      - states
+      - modes
+      - annotations
+      - notes
+      - descriptions
+      - summaries
+      - overviews
+      - details
+      - folders
+      - directories
+      - paths
+      - urls
+      - links
+      - networks
+      - nodes
+      - edges
+      - maps
+      - coordinates
+      - geolocation
+      - weather
+      - climate
+      - environment
+      - energy
+      - consumption
+      - usage
+      - cost
+      - price
+      - value
+      - currency
+      - exchange_rates
+      - finance
+      - accounting
+      - budgets
+      - expenses
+      - revenue
+      - income
+      - profit
+      - loss
+      - balance_sheet
+      - cash_flow
+      - liabilities
+      - equity
+      - investments
+      - portfolios
+      - funds
+      - stocks
+      - bonds
+      - commodities
+      - options
+      - futures
+      - derivatives
+      - risk
+      - insurance
+      - claims
+      - coverage
+      - premiums
+      - benefits
+      - healthcare
+      - patients
+      - doctors
+      - appointments
+      - prescriptions
+      - medications
+      - treatments
+      - diagnosis
+      - symptoms
+      - conditions
+      - diseases
+      - allergies
+      - tests
+      - lab_results
+      - medical_records
+      - family_history
+      - lifestyle
+      - habits
+      - fitness
+      - exercise
+      - diet
+      - nutrition
+      - recipes
+      - ingredients
+      - meals
+      - restaurants
+      - recommendations
+      - matches
+      - games
+      - sports
+      - coaches
+      - leagues
+      - tournaments
+      - standings
+      - tickets
+      - venues
+      - music
+      - artists
+      - albums
+      - tracks
+      - genres
+      - playlists
+      - podcasts
+      - episodes
+      - shows
+      - movies
+      - tv_shows
+      - series
+      - actors
+      - directors
+      - producers
+      - studios
+      - box_office
+      - awards
+      - nominations
+      - elections
+      - candidates
+      - parties
+      - results
+      - suggestions
+      - issues
+      - guides
+      - blog_posts
+      - news
+      - press_releases
+      - announcements
+      - webinars
+      - conferences
+      - speakers
+      - attendees
+      - sponsors
+      - helpdesk
+      - audit_log
+      - system_events
+      - oauth_tokens
+      - connections
+      - friends
+      - personas
+      - journeys
+      - use_cases
+      - requirements
+      - specifications
+      - roadmaps
+      - backlogs
+      - retrospectives
+      - feature_requests
+      - test_plans
+      - quality_assurance
+      - deployment
+      - builds
+      - pipelines
+      - containers
+      - virtual_machines
+      - servers
+      - instances
+      - clusters
+      - microservices
+      - endpoints
+      - apis
+      - plugins
+      - extensions
+      - themes
+      - widgets
+      - shortcodes
+      - blocks
+      - components
+      - libraries
+      - frameworks
+      - packages
+      - dependencies
+      - repositories
+      - commits
+      - branches
+      - tags
+      - pull_requests
+      - code_reviews
+      - merges
+      - conflicts
+      - resolutions
+      - deployments
+      - environments
+      - staging
+      - production
+      - monitoring
+      - logging
+      - alerting
+      - incident_management
+      - service_level_agreements
+      - uptime
+      - latency
+      - throughput
+      - bandwidth
+      - storage
+      - capacity
+      - utilization
+      - scaling
+      - load_balancing
+      - failover
+      - redundancy
+      - disaster_recovery
+      - business_continuity
+      - security
+      - encryption
+      - certificates
+      - keys
+      - secrets
+      - intrusion_detection
+      - vulnerabilities
+      - threats
+      - patches
+      - compliance
+      - audits
+      - certifications
+      - regulations
+      - standards
+      - best_practices
+      - guidelines
+      - policies
+      - procedures
+      - controls
+      - access_management
+      - identity_management
+      - authentication
+      - authorization
+      - encryption
+      - data_protection
+      - privacy
+      - gdpr
+      - ccpa
+      - hipaa
+      - customer_orders
+      - product_reviews
+      - sales_transactions
+      - inventory_levels
+      - supplier_contacts
+      - employee_salaries
+      - project_tasks
+      - marketing_campaigns
+      - financial_reports
+      - user_activity_logs
+      - website_visits
+      - email_subscriptions
+      - product_catalog
+      - order_shipments
+      - payment_transactions
+      - support_tickets
+      - user_feedback
+      - system_metrics
+      - application_settings
+      - device_metrics
+      - shipment_tracking
+      - warehouse_inventory
+      - product_returns
+      - sales_commissions
+      - customer_segments
+      - vendor_payments
+      - promotional_offers
+      - discount_coupons
+      - loyalty_programs
+      - affiliate_partners
+      - campaign_metrics
+      - ad_performance
+      - social_media_posts
+      - content_management
+      - blog_comments
+      - forum_threads
+      - user_notifications
+      - event_registrations
+      - webinar_attendees
+      - conference_schedule
+      - training_sessions
+      - employee_attendance
+      - leave_management
+      - performance_metrics
+      - payroll_records
+      - recruitment_pipeline
+      - job_applications
+      - interview_schedules
+      - onboarding_tasks
+      - employee_profiles
+      - time_tracking_logs
+      - expense_reports
+      - budget_allocations
+      - financial_transactions
+      - account_balances
+      - investment_portfolios
+      - loan_applications
+      - credit_scores
+      - billing_cycles
+      - invoice_payments
+      - subscription_services
+      - recurring_payments
+      - tax_records
+      - audit_logs
+      - compliance_checks
+      - risk_assessments
+      - security_incidents
+      - firewall_rules
+      - access_logs
+      - user_permissions
+      - role_assignments
+      - authentication_tokens
+      - session_records
+      - password_resets
+      - two_factor_auth
+      - device_registrations
+      - api_endpoints
+      - webhook_events
+      - data_exports
+      - data_imports
+      - data_transformations
+      - data_mappings
+      - schema_definitions
+      - model_parameters
+      - entity_relationships
+      - database_indexes
+      - foreign_keys
+      - primary_keys
+      - unique_constraints
+      - trigger_events
+      - stored_procedures
+      - user_roles
+      - user_permissions
+      - access_controls
+      - identity_verifications
+      - encryption_keys
+      - data_backups
+      - system_snapshots
+      - cache_settings
+      - cookie_preferences
+      - temporary_files
+      - job_queues
+      - cron_jobs
+      - scheduled_tasks
+      - alert_notifications
+      - sms_messages
+      - push_notifications
+      - marketing_emails
+      - ad_campaigns
+      - banner_ads
+      - promotional_codes
+      - loyalty_points
+      - reward_redeems
+      - achievement_bonuses
+      - badge_awards
+      - level_progressions
+      - rank_histories
+      - scoreboards
+      - leaderboard_entries
+      - dashboard_widgets
+      - chart_metrics
+      - graph_data
+      - dataset_sources
+      - data_feeds
+      - import_logs
+      - export_logs
+      - transformation_rules
+      - mapping_tables
+      - schema_versions
+      - model_versions
+      - entity_attributes
+      - relation_mappings
+      - index_definitions
+      - constraint_rules
+      - trigger_definitions
+      - function_definitions
+      - procedure_definitions
+      - policy_rules
+      - status_updates
+      - state_changes
+      - mode_settings
+      - annotation_notes
+      - note_entries
+      - description_fields
+      - summary_reports
+      - overview_documents
+      - detail_records
+      - folder_structures
+      - directory_paths
+      - url_mappings
+      - link_redirects
+      - network_topologies
+      - node_connections
+      - edge_relations
+      - map_coordinates
+      - geolocation_data
+      - weather_reports
+      - climate_data
+      - environment_stats
+      - energy_consumption
+      - usage_metrics
+      - cost_analysis
+      - pricing_models
+      - value_assessments
+      - currency_rates
+      - exchange_transactions
+      - financial_accounts
+      - accounting_entries
+      - budget_reports
+      - expense_logs
+      - revenue_streams
+      - income_records
+      - profit_and_loss
+      - balance_sheets
+      - cash_flows
+      - liability_records
+      - equity_holdings
+      - investment_details
+      - portfolio_allocations
+      - fund_distributions
+      - stock_holdings
+      - bond_investments
+      - commodity_prices
+      - option_trades
+      - futures_contracts
+      - derivative_positions
+      - risk_levels
+      - insurance_policies
+      - claim_records
+      - coverage_details
+      - premium_payments
+      - benefit_plans
+      - healthcare_records
+      - patient_profiles
+      - doctor_schedules
+      - appointment_logs
+      - prescription_orders
+      - medication_inventory
+      - treatment_plans
+      - diagnosis_records
+      - symptom_reports
+      - condition_statuses
+      - disease_cases
+      - allergy_info
+      - test_results
+      - lab_reports
+      - medical_history
+      - family_health
+      - lifestyle_choices
+      - habit_records
+      - fitness_goals
+      - exercise_logs
+      - diet_plans
+      - nutrition_info
+      - recipe_ingredients
+      - meal_plans
+      - restaurant_menus
+      - recommendation_systems
+      - match_results
+      - game_scores
+      - sports_teams
+      - coach_profiles
+      - league_standings
+      - tournament_brackets
+      - game_tickets
+      - venue_details
+      - music_albums
+      - artist_profiles
+      - track_lists
+      - genre_classifications
+      - playlist_contents
+      - podcast_episodes
+      - show_schedules
+      - movie_catalogs
+      - tv_show_schedules
+      - series_episodes
+      - actor_roles
+      - director_projects
+      - producer_contracts
+      - studio_equipment
+      - box_office_stats
+      - award_nominations
+      - election_results
+      - candidate_profiles
+      - party_affiliations
+      - voting_records
+      - suggestion_feedback
+      - issue_reports
+      - guide_documents
+      - blog_post_contents
+      - news_articles
+      - press_release_details
+      - announcement_records
+      - webinar_schedules
+      - conference_details
+      - speaker_profiles
+      - attendee_lists
+      - sponsor_details
+      - helpdesk_tickets
+      - audit_trail_logs
+      - system_event_records
+      - oauth_token_records
+      - connection_logs
+      - friend_lists
+      - persona_profiles
+      - journey_maps
+      - use_case_definitions
+      - requirement_specs
+      - specification_documents
+      - roadmap_plans
+      - backlog_items
+      - retrospective_notes
+      - feature_request_logs
+      - test_plan_documents
+      - quality_assurance_reports
+      - deployment_logs
+      - build_versions
+      - pipeline_runs
+      - container_images
+      - vm_instances
+      - server_metrics
+      - cluster_configs
+      - microservice_deployments
+      - api_documentations
+      - plugin_details
+      - extension_configs
+      - theme_settings
+      - widget_parameters
+      - shortcode_definitions
+      - block_contents
+      - component_specs
+      - library_dependencies
+      - framework_versions
+      - package_versions
+      - repository_commits
+      - branch_structures
+      - tag_releases
+      - pull_request_logs
+      - code_review_comments
+      - merge_conflicts
+      - resolution_steps
+      - deployment_environments
+      - staging_configs
+      - production_logs
+      - monitoring_metrics
+      - logging_records
+      - alert_settings
+      - incident_reports
+      - sla_compliance
+      - uptime_records
+      - latency_metrics
+      - throughput_logs
+      - bandwidth_usage
+      - storage_allocations
+      - capacity_planning
+      - utilization_stats
+      - scaling_events
+      - load_balancer_configs
+      - failover_logs
+      - redundancy_records
+      - disaster_recovery_plans
+      - business_continuity_docs
+      - security_policies
+      - encryption_methods
+      - certificate_issuances
+      - key_management
+      - secret_stores
+      - intrusion_detection_logs
+      - vulnerability_assessments
+      - threat_intelligence
+      - patch_management
+      - compliance_audits
+      - customers
+      - orders
+      - products
+      - inventory
+      - reviews
+      - accounts
+      - transactions
+      - budgets
+      - invoices
+      - expenses
+      - patients
+      - doctors
+      - appointments
+      - prescriptions
+      - diagnoses
+      - students
+      - courses
+      - teachers
+      - enrollments
+      - grades
+      - movies
+      - actors
+      - directors
+      - genres
+      - devices
+      - software
+      - servers
+      - apis
+      - security_patches
+      - teams
+      - players
+      - matches
+      - leagues
+      - scores
+      - cases
+      - attorneys
+      - clients
+      - courts
+      - documents
+      - employees
+      - departments
+      - payroll
+      - attendance
+      - leaves
+      - production_orders
+      - machines
+      - maintenance_logs
+      - suppliers
+      - quality_checks
+      - properties
+      - agents
+      - transactions
+      - leases
+      - inspections
+      - hotels
+      - rooms
+      - bookings
+      - guests
+      - amenities
+      - fleet
+      - trips
+      - drivers
+      - vehicles
+      - routes
+      - crops
+      - fields
+      - irrigation
+      - harvests
+      - livestock
+      - consumption
+      - production
+      - tariffs
+      - invoices
+      - stores
+      - sales
+      - promotions
+      - support_tickets
+      - assets
+      - incidents
+      - services
+      - drivers
+      - shipments
+      - carriers
+      - tracking
+      - accounts
+      - loans
+      - credit_cards
+      - articles
+      - authors
+      - comments
+      - views
+      - projects
+      - tasks
+      - workers
+      - equipment
+      - materials
+      - suppliers
+      - orders
+      - participants
+      - datasets
+      - tickets
+      - agents
+      - interactions
+      - resolutions
+      - feedback
+      - catalogs
+      - variants
+      - prices
+      - images
+      - assets
+      - locations
+      - assignments
+      - maintenance
+      - depreciation
+      - vendors
+      - contracts
+      - payments
+      - events
+      - attendees
+      - sponsors
+      - sessions
+      - tickets
+      - items
+      - warehouses
+      - stock_levels
+      - reorders
+      - orders
+      - order_items
+      - shipments
+      - payments
+      - invoices
+      - ecommerce_customers
+      - ecommerce_orders
+      - ecommerce_products
+      - ecommerce_categories
+      - ecommerce_inventory
+      - ecommerce_suppliers
+      - ecommerce_reviews
+      - ecommerce_discounts
+      - ecommerce_promotions
+      - ecommerce_shipping_methods
+      - ecommerce_payment_methods
+      - ecommerce_coupons
+      - ecommerce_wishlists
+      - ecommerce_cart_items
+      - ecommerce_fulfillment_centers
+      - finance_accounts
+      - finance_transactions
+      - finance_budgets
+      - finance_invoices
+      - finance_expenses
+      - finance_revenue
+      - finance_assets
+      - finance_liabilities
+      - finance_equity
+      - finance_investments
+      - finance_loans
+      - finance_credit_scores
+      - finance_tax_records
+      - finance_audits
+      - finance_compliance
+      - product_catalogs
+      - product_variants
+      - product_reviews
+      - product_prices
+      - product_images
+      - product_tags
+      - product_categories
+      - product_inventory
+      - product_suppliers
+      - product_shipments
+
+  - name: instruction_phrase
+    values:
+      - "Construct an SQL query to"
+      - "Retrieve the"
+      - "List the"
+      - "Show me the"
+      - "Fetch the"
+      - "Display the"
+      - "Extract the"
+      - "Find the"
+      - "Provide the"
+      - "Get the"
+      - "Select the"
+      - "Return the results of"
+      - "Produce a query that will"
+      - "Outline a SQL statement that"
+      - "Prepare an SQL command to"
+      - "Generate a selection from"
+      - "Identify the entries that"
+      - "Give me a SQL command to"
+      - "Draft a SQL query for"
+      - "Create a SQL SELECT statement that will"
+      - "Formulate a query to"
+      - "Determine the rows to"
+      - "Summon the records to"
+      - "Pull the relevant data to"
+      - "Uncover the specified columns to"
+      - "Initiate a SQL query to"
+      - "Generate a SQL statement that"
+      - "Create a SQL query to"
+      - "Formulate an SQL statement to"
+      - "Design a SQL query that"
+      - "Develop a SQL statement to"
+      - "Craft an SQL query to"
+      - "Compose a SQL statement that"
+      - "Build a SQL query to"
+      - "Assemble a SQL statement that"
+      - "Frame a SQL query to"
+      - "Devise a SQL statement that"
+      - "Construct a SQL statement to"
+      - "Outline a SQL query that"
+      - "Prepare a SQL statement to"
+      - "Design a SQL query that"
+      - "Develop a SQL query to"
+      - "Formulate a SQL statement that"
+      - "Create a SQL statement that"
+      - "Generate a SQL query that"
+      - "Craft a SQL query that"
+      - "Compose a SQL query to"
+      - "Build a SQL statement that"
+      - "Assemble a SQL query that"
+      - "Frame a SQL statement to"
+      - "Devise a SQL query that"
+      - "Initiate a SQL statement that"
+      - "Generate a SQL query to"
+      - "Create a SQL query that will"
+      - "Formulate a SQL query that will"
+      - "Design a SQL query that will"
+      - "Can you provide a SQL query to"
+      - "What SQL command would you use to"
+      - "How would you write a SQL query to"
+      - "Could you draft a SQL statement that"
+      - "Please formulate a SQL command to"
+      - "Would you generate a SQL statement that"
+      - "I need a SQL query that"
+      - "Please construct a SQL statement to"
+      - "Could you design a SQL query that"
+      - "How can I create a SQL command to"
+      - "What is the SQL query to"
+      - "Can you draft a SQL statement that will"
+    num_new_values_to_generate: 25
+
+generated_data_columns:
+  - name: column_names
+    generation_prompt: >-
+      Generate 3 realistic SQL column names for the table '{table_name}'.
+      Ensure the chosen column name can be used as is in the SQL query, and that it differs clearly from '{table_name}'.
+
+      Important Guidelines:
+        * The column name must be in snake_case like "total_amount" or "created_at".
+        * It should be relevant to the type of entities in '{table_name}'.
+        * Avoid overly similar or derived forms of the table name. Choose distinct attributes.
+        * Use a common, domain-specific attribute unrelated directly to the table_name. For instance:
+          - For "users": "email", "created_at", "last_login", "status", "age"
+          - For "orders": "order_date", "total_amount", "customer_id", "status"
+          - For "employees": "salary", "age", "department_id", "hire_date", "job_title"
+        * If asked for multiple columns, ensure they are distinct and seperate by commas.
+        * Do not include any additional text or formatting.
+
+    columns_to_list_in_prompt: [table_name]
+
+  - name: selected_columns
+    generation_prompt: >-
+      From the column names '{column_names}', randomly select 3 columns to include in the SQL query.
+      Include just the selected column names (separated by commas if multiple).
+
+      Important Guidelines:
+        * Do not add or remove characters; use the columns exactly as provided.
+        * Do not include any additional text or formatting.
+        * Do not include 'selected columns' in the response.
+
+    columns_to_list_in_prompt: [column_names]
+
+  - name: column_data_types
+    generation_prompt: >-
+      Suggest appropriate SQL numeric data types (e.g., INT, FLOAT, DECIMAL, VARCHAR(255)) for 3 in '{column_names}' in the table '{table_name}'. 
+      Do not include any additional text or formatting. Do not include any column names, just the 3 data types (separated by commas if multiple).
+
+    columns_to_list_in_prompt: [column_names]
+
+  - name: sql_prompt
+    generation_prompt: >-
+      Generate a clear and concise natural language instruction for a SQL query to select '{selected_columns}' from '{table_name}'. 
+      The instruction should begin with the phrase '{instruction_phrase}'.
+
+      Important Guidelines:
+        * Use the exact '{table_name}' and '{selected_columns}' as they are (snake_case) in the instruction.
+        * Do not introduce any variations or alternate forms of the table or column names.
+        * Example: If table_name = employees and selected_columns = name, age, salary, 
+          and instruction_phrase = "Show me the", the instruction should be exactly:
+          "Show me the name, age, salary from employees"
+        * Do not include any additional text or formatting beyond the instruction itself.
+
+    columns_to_list_in_prompt: [instruction_phrase, selected_columns, table_name]
+
+  - name: sql_context
+    generation_prompt: >-
+      Generate the SQL CREATE TABLE statement for a table named '{table_name}' that includes the columns '{column_names}' 
+      with data types '{column_data_types}'. The statement should be executable, syntactically correct, 
+      and should not include any additional text or formatting.
+
+      Important Guidelines:
+        * Use the provided '{table_name}' and '{column_names}' exactly.
+        * Include all columns from '{column_names}'.
+        * Match each column to the corresponding data type from '{column_data_types}'.
+        * Do not include any additional text or formatting other than the SQL statement itself.
+
+    columns_to_list_in_prompt: [table_name, column_names, column_data_types]
+    llm_type: code
+
+  - name: sql
+    generation_prompt: >-
+      Write the SQL query that selects '{selected_columns}' from '{table_name}' as per the instruction '{sql_prompt}'.
+
+      Important Guidelines:
+        * The SQL query must use the exact snake_case names '{table_name}' and each of '{selected_columns}'.
+        * The query should select columns as indicated by '{selected_columns}'.
+        * Do not include any additional text or formatting.
+        * The query must match the instruction's intent and names exactly.
+
+    columns_to_list_in_prompt: [sql_prompt, selected_columns, table_name]
+    llm_type: code
+
+post_processors:
+  - validator: code
+    settings:
+      code_lang: ansi
+      code_columns: [sql_context, sql]
+
+  - evaluator: text_to_sql
+    settings:
+      text_column: sql_prompt
+      code_column: sql
+      context_column: sql_context

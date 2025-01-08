@@ -1,0 +1,14 @@
+python finetune.py --finetune \
+    --model_name "roneneldan/TinyStories-Instruct-2Layers-33M" \
+    --learning_rate 2e-5 \
+    --warmup_steps 50 \
+    --num_train_epochs 3 \
+    --batch_size 8 \
+    --gradient_accumulation_steps 1 \
+    --weight_decay 0.01 \
+    --dataset_name "withmartian/cs1_dataset" \
+    --output_dir "models/sft_sql_interp_TinyStories-2Layers-33M_cs1_experiment_1.8" \
+    --max_seq_length 512 \
+    --wandb_project "sft_sql_interp" \
+    --wandb_entity "dhruv-gretel" \
+    --wandb_run_name "sft_sql_interp_TinyStories-2Layers-33M_cs1_experiment_1.8"
