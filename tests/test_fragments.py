@@ -1,21 +1,25 @@
 import unittest
 
 from TinySQL.training_data import ( get_english_aggregate_phrase, get_english_select_from_phrase, 
-    get_english_order_by_phrase, get_sql_table_fields, get_sql_table_name,
-    get_english_aggregate_count, get_field_names_count, get_sql_table_name_count, get_english_select_from_count, get_english_order_by_count)
+    get_english_order_by_phrase, get_sql_table_fields, get_sql_table_name, get_english_aggregate_count, 
+    get_field_names_count, get_sql_table_name_count, get_english_select_from_count, get_english_order_by_count)
+from TinySQL.training_data.fragments.models import TableName
 
 
 class TestFragments(unittest.TestCase):
 
     def test_table_name(self):
         
-        phrase = get_sql_table_name()
+        tableName = get_sql_table_name()
         
-        print( "Sample table name:", phrase )
+        print( "Sample table name:", tableName.name, "with synonym:", tableName.synonym )
  
     def test_field_names_and_type(self):
         
-        selected_fields = get_sql_table_fields("notes", 3)
+        table_name = TableName
+        table_name.name = "notes"
+        table_name.synonym = "thoughts"
+        selected_fields = get_sql_table_fields(table_name, 3)
         
         print( "Sample field name:", selected_fields )
 
