@@ -60,16 +60,17 @@ def evaluate_cs3_prediction_score(item: BatchItem, predicted_sql_statement: str)
             points_earned += 1
 
     # Criterion: table_name is after FROM 
-    if 'FROM' in test_tokens and item.table_name.upper() in test_tokens:
+    table_str = item.table_name.name.upper()
+    if 'FROM' in test_tokens and table_str in test_tokens:
         from_index = test_tokens.index('FROM')
-        table_name_index = test_tokens.index(item.table_name.upper())
+        table_name_index = test_tokens.index(table_str)
 
         total_points += 1
         if table_name_index > from_index:
             points_earned += 1
 
     # Criterion: There are no unrecognized words 
-    recognized_words = ['SELECT', 'AS', 'FROM', item.table_name.upper()]
+    recognized_words = ['SELECT', 'AS', 'FROM', table_str]
     recognized_words += [field.aggregate_of_field.upper() for field in item.select]
     recognized_words += [field.aggregated_name.upper() for field in item.select if field.aggregate != ""]
     (earned, possible) = evaluate_unrecognised_words(recognized_words, test_tokens)

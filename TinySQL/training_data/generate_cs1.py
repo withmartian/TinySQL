@@ -4,7 +4,7 @@ from .fragments.english_select_from import get_english_select_from_phrase
 from .fragments.english_order_by import get_english_order_by_phrase
 from .sql_create_table import get_sql_create_table
 from .sql_select_from import get_sql_select_from
-from .fragments.models import BatchItem, OrderField, SelectField, trim_newlines_and_multiple_spaces
+from .fragments.models import TableName, BatchItem, OrderField, SelectField, trim_newlines_and_multiple_spaces
 
 
 def get_english_order_by(fields: list[OrderField]) -> str:
@@ -19,7 +19,7 @@ def get_english_order_by(fields: list[OrderField]) -> str:
     return answer
 
 
-def get_english_select_from(table_name: str, fields: list[SelectField]) -> str:
+def get_english_select_from(table_name: TableName, fields: list[SelectField]) -> str:
     template = get_english_select_from_phrase()    
     
     english_fields = ""
@@ -53,13 +53,13 @@ def get_english_select_from(table_name: str, fields: list[SelectField]) -> str:
             english_fields += ", "   
        
     # Create English phrase
-    english = template.replace("[fields]", english_fields).replace("[table]", table_name)
+    english = template.replace("[fields]", english_fields).replace("[table]", table_name.name)
     
     return english
 
 
 # Generate a batch of "command set 1" prompts and answers. These are SQL SELECT statements with a single table and a few fields.
-def generate_cs1(batch_size, min_cols=2, max_cols=12):
+def generate_cs1(batch_size, min_cols=2, max_cols=12) -> list[BatchItem]:
 
     batch = []
     for i in range(batch_size):
@@ -71,7 +71,7 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12):
 
         batch_item = BatchItem(
             command_set=1, 
-            table_name=table_name,
+            table_name=TableName(name=table_name.name, synonym=table_name.synonym),
             table_fields=table_fields,
             create_statement=create_table_statement,
             select=selected_fields,
@@ -79,7 +79,7 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12):
             english_prompt=english_select_from_prompt,
             sql_statement=sql_select_statement, # ground truth
         )
-
+        
         batch.append(batch_item)
 
     return batch
@@ -152,7 +152,7 @@ def evaluate_cs1_prediction_score_part1(item: BatchItem, predicted_sql_statement
 
     # Criterion: Contains table_name (1 point)
     total_points += 1
-    if item.table_name.upper() in tokens_upper:
+    if item.table_name.name.upper() in tokens_upper:
         points_earned += 1
 
     # Criterion: Contains FROM (1 point)
@@ -217,16 +217,17 @@ def evaluate_cs1_prediction_score_part2(item: BatchItem, predicted_sql_statement
             points_earned += 1
 
     # Criterion: table_name is after FROM 
-    if 'FROM' in test_tokens and item.table_name.upper() in test_tokens:
+    table_str = item.table_name.name.upper()
+    if 'FROM' in test_tokens and table_str in test_tokens:
         from_index = test_tokens.index('FROM')
-        table_name_index = test_tokens.index(item.table_name.upper())
+        table_name_index = test_tokens.index(table_str)
 
         total_points += 1
         if table_name_index > from_index:
             points_earned += 1
 
     # Criterion: There are no unrecognized words 
-    recognized_words = ['SELECT', 'FROM', item.table_name.upper()] + [field.name.upper() for field in item.select]
+    recognized_words = ['SELECT', 'FROM', table_str] + [field.name.upper() for field in item.select]
     (earned, possible) = evaluate_unrecognised_words(recognized_words, test_tokens)
     total_points += possible
     points_earned += earned
@@ -234,7 +235,8 @@ def evaluate_cs1_prediction_score_part2(item: BatchItem, predicted_sql_statement
     return (points_earned, total_points)
 
 
-def evaluate_cs1_prediction_score(item, predicted_sql_statement):
+def evaluate_cs1_prediction_score(item: BatchItem, predicted_sql_statement):
+
     (points_earned_part1, total_points_part1) = evaluate_cs1_prediction_score_part1(item, predicted_sql_statement)
     (points_earned_part2, total_points_part2) = evaluate_cs1_prediction_score_part2(item, predicted_sql_statement)
 

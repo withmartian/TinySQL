@@ -1,7 +1,7 @@
 from .sql_create_table import get_sql_create_table
 from .sql_select_from import get_sql_select_from
 from .sql_order_by import get_sql_order_by
-from .fragments.models import BatchItem
+from .fragments.models import TableName, BatchItem
 from .generate_cs1 import evaluate_cs1_prediction_score, get_english_select_from, get_english_order_by, trim_newlines_and_multiple_spaces, evaluate_unrecognised_words
 
 
@@ -28,7 +28,7 @@ def generate_cs2(batch_size, order_by_clause_probability=0.9, use_aggregates=Fal
 
         batch_item = BatchItem(
             command_set=2,
-            table_name=table_name,
+            table_name=TableName(name=table_name.name, synonym=table_name.synonym),
             table_fields=table_fields,
             create_statement=create_table_statement,
             select=selected_fields,

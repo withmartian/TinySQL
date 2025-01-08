@@ -34,17 +34,20 @@ class TestCommandSet1(unittest.TestCase):
     # The "ground truth" should score 100%  
     def test_generate_cs1_ground_truth(self):
             
+        i = 0
         batch_size = 3000
-        answer = generate_cs1(batch_size) 
-        for i in range(batch_size):
-
-            prediction = answer[i].sql_statement
-            accuracy = evaluate_cs1_prediction(answer[i], prediction)
+        batch = generate_cs1(batch_size) 
+        for batch_item in batch:
+            prediction = batch_item.sql_statement
+            accuracy = evaluate_cs1_prediction(batch_item, prediction)
             if accuracy < 1:
-                print("Example:", i)                
-                print("Prediction", prediction)
+                print("Example :", i)                
+                print("Table   :", batch_item.table_name.name, "with synonym:", batch_item.table_name.synonym)                
+                print("Answer  :", batch_item.sql_statement)                
+                print("Predicts:", prediction)
                 print("Accuracy:", accuracy)      
             assert(accuracy == 1)
+            i += 1
 
     def include_prediction(self, i, prediction, accuracy, threshold, max_accuracy):
         if accuracy >= threshold:        
