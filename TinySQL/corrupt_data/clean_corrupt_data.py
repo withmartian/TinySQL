@@ -117,7 +117,7 @@ class CorruptFeatureTestGenerator:
             direction = random.choice(self.directions)
             order_by_clause = f" ORDER BY {order_by_field} {direction}"
             order_by_english = f" ordered by {order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
-            order_by_fields = [SelectField(order_by_field, direction)]
+            order_by_fields = [SelectField(order_by_field, direction, order_by_field)]
         
         english_prompt = f"show me the {fields[0]} and {fields[1]} from the {table_name.name} table{order_by_english}"
         sql_statement = f"SELECT {fields[0]}, {fields[1]} FROM {table_name.name}{order_by_clause}"
@@ -127,7 +127,7 @@ class CorruptFeatureTestGenerator:
             table_name=TableName(name=table_name.name, synonym=table_name.synonym),
             table_fields=selected_fields,
             create_statement=get_sql_create_table_from_selected_fields(table_name, selected_fields)[2],
-            select=[SelectField(f, "") for f in fields],
+            select=[SelectField(f, "", f) for f in fields],
             order_by=order_by_fields,
             english_prompt=english_prompt,
             sql_statement=sql_statement

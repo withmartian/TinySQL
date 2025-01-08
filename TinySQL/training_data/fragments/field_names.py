@@ -62,14 +62,15 @@ def get_sql_select_fields( table_fields : List[TableField], N: int, use_aggregat
 
         field_name = a_table_field.name
         field_type = a_table_field.type.upper()
+        field_synonym = a_table_field.synonym
         
         if use_aggregates:
             # Get valid aggregates for this field type
             valid_aggregates = aggregate_by_type.get(field_type, default_aggregates)
             agg = random.choice(valid_aggregates)
-            selected_fields += [SelectField(name=field_name, aggregate=agg)]
+            selected_fields += [SelectField(name=field_name, aggregate=agg, synonym=field_synonym)]
         else:
-            selected_fields += [SelectField(name=field_name, aggregate="")]
+            selected_fields += [SelectField(name=field_name, aggregate="", synonym=field_synonym)]
 
     return selected_fields
 

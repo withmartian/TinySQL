@@ -20,15 +20,20 @@ def get_english_order_by(fields: list[OrderField]) -> str:
 
 
 def get_english_select_from(table_name: TableName, fields: list[SelectField], use_synonyms: bool) -> str:
-    template = get_english_select_from_phrase()    
+    template = get_english_select_from_phrase()
     
+    # Decide table name: 80% chance to use synonym if use_synonyms is True.
+    if use_synonyms and random.random() < 0.8:
+        table_str = table_name.synonym
+    else:
+        table_str = table_name.name
+
     english_fields = ""
     for i, field in enumerate(fields):
-
+        # Determine which aggregate phrase set to use, if any.
         phrases = None
         if field.aggregate is None:
-            # No aggregates  
-            pass
+            pass  # No aggregates
         elif field.aggregate == "SUM":
             phrases = get_english_sum_phrases()
         elif field.aggregate == "AVG":
@@ -40,22 +45,27 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField], us
         elif field.aggregate == "COUNT":
             phrases = get_english_count_phrases()
 
-        field_str = field.name # field.synonym if use_synonyms else field.name
+        # Decide field name: 50% chance to use synonym if use_synonyms is True.
+        if use_synonyms and random.random() < 0.5:
+            field_str = field.synonym
+        else:
+            field_str = field.name
+
+        # Prepend any aggregate phrase (e.g. "the total", "the average") if applicable
         if phrases is None:
             english_field = field_str
         else:
             english_field = f"{random.choice(phrases)} {field_str}"
 
         english_fields += english_field
-        
-        if i == len(fields) - 2:
-            english_fields += " and "   
-        elif i < len(fields) - 2:
-            english_fields += ", "   
-       
-    table_str = table_name.synonym if use_synonyms else table_name.name
 
-    # Create English phrase
+        # Add commas/and between fields
+        if i == len(fields) - 2:
+            english_fields += " and "
+        elif i < len(fields) - 2:
+            english_fields += ", "
+
+    # Create the final English phrase
     english = template.replace("[fields]", english_fields).replace("[table]", table_str)
     
     return english

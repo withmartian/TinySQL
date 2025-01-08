@@ -20,6 +20,7 @@ class TableName:
 class SelectField:
     name: str
     aggregate: str # SUM, AVG, MIN, MAX, COUNT, ""
+    synonym: str # english synonym for the field name
 
     @property
     def aggregate_of_field(self):
@@ -57,7 +58,6 @@ class BatchItem:
     table_fields: List[TableField]
     create_statement: str
     select: List[SelectField]
-    #order_by: List[OrderField] | None
     order_by: List[OrderField]
     english_prompt: str
     sql_statement: str
