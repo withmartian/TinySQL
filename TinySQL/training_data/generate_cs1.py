@@ -19,7 +19,7 @@ def get_english_order_by(fields: list[OrderField]) -> str:
     return answer
 
 
-def get_english_select_from(table_name: TableName, fields: list[SelectField]) -> str:
+def get_english_select_from(table_name: TableName, fields: list[SelectField], use_synonyms: bool) -> str:
     template = get_english_select_from_phrase()    
     
     english_fields = ""
@@ -40,10 +40,11 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField]) ->
         elif field.aggregate == "COUNT":
             phrases = get_english_count_phrases()
 
+        field_str = field.name # field.synonym if use_synonyms else field.name
         if phrases is None:
-            english_field = field.name
+            english_field = field_str
         else:
-            english_field = f"{random.choice(phrases)} {field.name}"
+            english_field = f"{random.choice(phrases)} {field_str}"
 
         english_fields += english_field
         
@@ -52,14 +53,16 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField]) ->
         elif i < len(fields) - 2:
             english_fields += ", "   
        
+    table_str = table_name.synonym if use_synonyms else table_name.name
+
     # Create English phrase
-    english = template.replace("[fields]", english_fields).replace("[table]", table_name.name)
+    english = template.replace("[fields]", english_fields).replace("[table]", table_str)
     
     return english
 
 
 # Generate a batch of "command set 1" prompts and answers. These are SQL SELECT statements with a single table and a few fields.
-def generate_cs1(batch_size, min_cols=2, max_cols=12) -> list[BatchItem]:
+def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms=False) -> list[BatchItem]:
 
     batch = []
     for i in range(batch_size):
@@ -67,7 +70,7 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12) -> list[BatchItem]:
 
         (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, False)
 
-        english_select_from_prompt = get_english_select_from(table_name, selected_fields)
+        english_select_from_prompt = get_english_select_from(table_name, selected_fields, use_synonyms)
 
         batch_item = BatchItem(
             command_set=1, 

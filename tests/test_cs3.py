@@ -98,8 +98,12 @@ class TestCommandSet3(unittest.TestCase):
 
 
     def test_generate_csn(self):
-        generate_csn(5, 1, 0.9, False, 2, 6)
-        generate_csn(5, 2, 0.9, False, 3,3)
-        generate_csn(5, 3, 0.9, True, 1, 4)
+        generate_csn(5, 1, 0.9, False, 2, 6, False)
+        generate_csn(5, 2, 0.9, False, 3, 3, False)
+        generate_csn(5, 3, 0.9, True, 1, 4, False)
+
+        generate_csn(5, 1, 0.9, False, 2, 6, True)
+        generate_csn(5, 2, 0.9, False, 3, 3, True)
+        generate_csn(5, 3, 0.9, True, 1, 4, True)        
 
     
