@@ -1,12 +1,11 @@
 from .fragments.field_names import (
-    get_sql_field_names_and_types,
-    get_field_names_and_types_list,
+    get_field_names_with_synonyms,
     get_sql_table_fields,
     get_field_names_count
 )
 
 from .fragments.table_names import (
-    get_sql_table_names,
+    get_sql_table_names_with_synonyms,
     get_sql_table_name,
     get_sql_table_name_count
 )

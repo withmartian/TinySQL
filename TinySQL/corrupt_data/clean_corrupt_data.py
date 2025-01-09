@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import List, Optional
 import random
-from TinySQL.training_data.fragments.models import BatchItem, TableField, SelectField
+from TinySQL.training_data.fragments.models import TableName, BatchItem, TableField, SelectField
 from TinySQL.training_data.sql_create_table import get_sql_create_table_from_selected_fields
-from TinySQL.training_data.sql_select_from import get_sql_select_from_selected_fields
+
 
 UNKNOWN_VALUE = -1
 ENGTABLENAME = "EngTableName"
@@ -31,7 +31,7 @@ class CorruptibleBatchItem(BatchItem):
     def clean_BatchItem(self) -> BatchItem:
         return BatchItem(
             command_set=self.command_set,
-            table_name=self.table_name,
+            table_name=TableName(name=self.table_name.name, synonym=self.table_name.synonym),
             table_fields=self.table_fields,
             create_statement=self.create_statement,
             select=self.select,
@@ -44,7 +44,7 @@ class CorruptibleBatchItem(BatchItem):
     def corrupt_BatchItem(self) -> BatchItem:
         return BatchItem(
             command_set=self.command_set,
-            table_name=self.table_name,
+            table_name=TableName(name=self.table_name.name, synonym=self.table_name.synonym),
             table_fields=self.table_fields,
             create_statement=self.corrupt_create_statement or self.create_statement,
             select=self.select,
@@ -99,12 +99,14 @@ class CorruptFeatureTestGenerator:
     
     def _make_base_item(self) -> BatchItem:
         """Create a random clean base item with optional ORDER BY support"""
-        table_name = random.choice(self.clean_table_names)
+        clean_str = random.choice(self.clean_table_names)
+        table_name = TableName(name=clean_str, synonym=clean_str)
+
         fields = random.sample(self.clean_field_names, 2)
         types = [random.choice(self.clean_field_types) for _ in fields]
         
         assert fields[0] != fields[1]
-        selected_fields = [TableField(f, t) for f, t in zip(fields, types)]
+        selected_fields = [TableField(f, t, f) for f, t in zip(fields, types)]
         
         order_by_clause = ""
         order_by_english = ""
@@ -115,17 +117,17 @@ class CorruptFeatureTestGenerator:
             direction = random.choice(self.directions)
             order_by_clause = f" ORDER BY {order_by_field} {direction}"
             order_by_english = f" ordered by {order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
-            order_by_fields = [SelectField(order_by_field, direction)]
+            order_by_fields = [SelectField(order_by_field, direction, order_by_field)]
         
-        english_prompt = f"show me the {fields[0]} and {fields[1]} from the {table_name} table{order_by_english}"
-        sql_statement = f"SELECT {fields[0]}, {fields[1]} FROM {table_name}{order_by_clause}"
+        english_prompt = f"show me the {fields[0]} and {fields[1]} from the {table_name.name} table{order_by_english}"
+        sql_statement = f"SELECT {fields[0]}, {fields[1]} FROM {table_name.name}{order_by_clause}"
         
         return BatchItem(
             command_set=2 if self.use_order_by else 1,
-            table_name=table_name,
+            table_name=TableName(name=table_name.name, synonym=table_name.synonym),
             table_fields=selected_fields,
             create_statement=get_sql_create_table_from_selected_fields(table_name, selected_fields)[2],
-            select=[SelectField(f, "") for f in fields],
+            select=[SelectField(f, "", f) for f in fields],
             order_by=order_by_fields,
             english_prompt=english_prompt,
             sql_statement=sql_statement
@@ -207,11 +209,11 @@ class CorruptFeatureTestGenerator:
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
         names = self.novel_table_names if self.use_novel_names else self.clean_table_names
-        wrong_table = random.choice([t for t in names if t != base.table_name])
-        corrupted = base.english_prompt.replace(base.table_name, wrong_table)
+        wrong_table = random.choice([t for t in names if t != base.table_name.name])
+        corrupted = base.english_prompt.replace(base.table_name.name, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGTABLENAME, corrupt_english_prompt=corrupted )
-        self.set_clean_corrupt_tokens(item, base.table_name, wrong_table, False)
+        self.set_clean_corrupt_tokens(item, base.table_name.name, wrong_table, False)
         return item
      
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
@@ -240,11 +242,11 @@ class CorruptFeatureTestGenerator:
     def _corrupt_def_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
         names = self.novel_table_names if self.use_novel_names else self.clean_table_names        
-        wrong_table = random.choice([t for t in names if t != base.table_name])
-        corrupted = base.create_statement.replace(base.table_name, wrong_table)
+        wrong_table = random.choice([t for t in names if t != base.table_name.name])
+        corrupted = base.create_statement.replace(base.table_name.name, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFTABLENAME, corrupt_create_statement=corrupted )
-        self.set_clean_corrupt_tokens(item, base.table_name, wrong_table, True)
+        self.set_clean_corrupt_tokens(item, base.table_name.name, wrong_table, True)
         return item
           
     def _corrupt_def_field_name(self) -> CorruptibleBatchItem:
