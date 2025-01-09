@@ -305,19 +305,21 @@ def main():
     # Decide evaluation function based on the dataset
     if "withmartian/cs1_dataset" in args.dataset_name:
         evaluate_cs_function = evaluate_cs1_prediction
+    elif "withmartian/cs2_dataset" in args.dataset_name:
+        evaluate_cs_function = evaluate_cs2_prediction
+    elif "withmartian/cs3_dataset" in args.dataset_name:
+        evaluate_cs_function = evaluate_cs3_prediction
     elif "withmartian/cs11_dataset" in args.dataset_name:
         evaluate_cs_function = evaluate_cs1_prediction
     elif "withmartian/cs12_dataset" in args.dataset_name:
         evaluate_cs_function = evaluate_cs1_prediction
     elif "withmartian/cs13_dataset" in args.dataset_name:
         evaluate_cs_function = evaluate_cs1_prediction
-    elif "withmartian/cs11_valid" in args.dataset_name:
+    elif "withmartian/cs1_dataset_synonyms" in args.dataset_name:
         evaluate_cs_function = evaluate_cs1_prediction
-    elif "withmartian/cs2_dataset" in args.dataset_name:
+    elif "withmartian/cs2_dataset_synonyms" in args.dataset_name:
         evaluate_cs_function = evaluate_cs2_prediction
-    elif "withmartian/cs12_valid" in args.dataset_name:
-        evaluate_cs_function = evaluate_cs1_prediction
-    elif "withmartian/cs3_dataset" in args.dataset_name:
+    elif "withmartian/cs3_dataset_synonyms" in args.dataset_name:
         evaluate_cs_function = evaluate_cs3_prediction
     else:
         raise ValueError("Invalid dataset name, this script is only for SQL-interp datasets!")

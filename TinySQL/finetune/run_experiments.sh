@@ -14,13 +14,13 @@ wandb_entity="dhruv-gretel"
 
 # Define the list of datasets to train on
 dataset_names=(
-    "withmartian/cs1_dataset"
-    "withmartian/cs2_dataset"
-    "withmartian/cs3_dataset"
+    "withmartian/cs1_dataset_synonyms"
+    "withmartian/cs2_dataset_synonyms"
+    "withmartian/cs3_dataset_synonyms"
 )
 
 ######### MODEL HYPERPARAMETERS #########
-num_train_epochs=1
+num_train_epochs=3
 batch_size=8
 gradient_accumulation_steps=1
 warmup_steps=50
@@ -41,8 +41,8 @@ sanitized_project_name=$(echo "$project_name" | tr '/\\:#?%,' '_')
 # Define model and simplified model name for the experiment
 model_names=(
     "roneneldan/TinyStories-Instruct-2Layers-33M"
-    "Qwen/Qwen2.5-0.5B-Instruct"
-    "meta-llama/Llama-3.2-1B-Instruct"
+    #"Qwen/Qwen2.5-0.5B-Instruct"
+    #"meta-llama/Llama-3.2-1B-Instruct"
     #"HuggingFaceTB/SmolLM2-135M-Instruct"
     #"HuggingFaceTB/SmolLM2-360M-Instruct"
 )
@@ -55,7 +55,7 @@ declare -A simplified_model_names=(
     ["HuggingFaceTB/SmolLM2-360M-Instruct"]="SmolLM2-360M"
 )
 
-experiment_counter=4
+experiment_counter=1
 
 # Loop through each model and dataset
 for model_name in "${model_names[@]}"; do
@@ -64,7 +64,7 @@ for model_name in "${model_names[@]}"; do
     echo "Simplified: $simplified_model_name"
 
     for dataset_name in "${dataset_names[@]}"; do
-        sub_experiment_counter=2
+        sub_experiment_counter=10
         # Loop through each learning rate and run the script
         for lr in "${learning_rates[@]}"; do
             # Create the experiment name like sft_llama3.1_lr_experiment_2.1, 2.2, etc.
