@@ -91,7 +91,7 @@ class CorruptFeatureTestGenerator:
         
         # Original sample data
         self.clean_table_names = ["cost", "people", "inventory", "orders", "products"]
-        self.synonym_table_names = ["expense", "individuals", "stock", "requests", "goods"]
+        self.synonym_table_names = {"cost":"expense", "people":"individuals", "inventory":"stock", "orders":"requests", "products":"goods"}
         self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
         self.clean_field_names = ["price", "count", "amount", "total", "name", "id"]
         self.novel_field_names = ["hammer", "little", "wolf", "sky", "yellow"]
@@ -102,7 +102,7 @@ class CorruptFeatureTestGenerator:
     def _make_base_item(self) -> BatchItem:
         """Create a random clean base item with optional ORDER BY support"""
         clean_str = random.choice(self.clean_table_names)
-        clean_syn = random.choice(self.synonym_table_names) if self.use_synonyms else clean_str
+        clean_syn = self.synonym_table_names[clean_str] if self.use_synonyms else clean_str
         table_name = TableName(name=clean_str, synonym=clean_syn)
 
         fields = random.sample(self.clean_field_names, 2)
