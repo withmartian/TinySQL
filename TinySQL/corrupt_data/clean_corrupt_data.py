@@ -122,7 +122,7 @@ class CorruptFeatureTestGenerator:
         table_name = TableName(name=clean_str, synonym=clean_syn)
 
         fields = random.sample(self.clean_field_names, random.randint(2, 5))
-        eng_fields = ', '.join([self.synonym_field_names[f] for f in fields[:-1]]) if self.use_synonyms else ' and '.join(fields[:-1]) + ' and ' + (self.synonym_field_names[fields[-1]] if self.use_synonyms else fields[-1])
+        eng_fields = ', '.join([self.synonym_field_names[f] for f in fields[:-1]] if self.use_synonyms else fields[:-1]) + ' and ' + (self.synonym_field_names[fields[-1]] if self.use_synonyms else fields[-1])
         crt_fields = ', '.join([f for f in fields])
         types = [random.choice(self.clean_field_types) for _ in fields]
         
