@@ -126,7 +126,6 @@ class CorruptFeatureTestGenerator:
         crt_fields = ', '.join([f for f in fields])
         types = [random.choice(self.clean_field_types) for _ in fields]
         
-        assert fields[0] != fields[1]
         selected_fields = [TableField(f, t, self.synonym_field_names[f]) for f, t in zip(fields, types)]
         
         order_by_clause = ""
