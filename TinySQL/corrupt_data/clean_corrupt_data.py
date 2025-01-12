@@ -81,15 +81,17 @@ class CorruptibleBatchItem(BatchItem):
 
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, 
-                 tokenizer = None, use_novel_names: bool = False, use_order_by: bool = False):
+                 tokenizer = None, use_novel_names: bool = False, use_order_by: bool = False, use_synonyms: bool = False):
         self.model_num = model_num
         self.cs_num = cs_num
         self.tokenizer = tokenizer
         self.use_novel_names = use_novel_names
         self.use_order_by = use_order_by
+        self.use_synonyms = use_synonyms
         
         # Original sample data
         self.clean_table_names = ["cost", "people", "inventory", "orders", "products"]
+        self.synonym_table_names = ["expense", "individuals", "stock", "requests", "goods"]
         self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
         self.clean_field_names = ["price", "count", "amount", "total", "name", "id"]
         self.novel_field_names = ["hammer", "little", "wolf", "sky", "yellow"]
@@ -100,7 +102,8 @@ class CorruptFeatureTestGenerator:
     def _make_base_item(self) -> BatchItem:
         """Create a random clean base item with optional ORDER BY support"""
         clean_str = random.choice(self.clean_table_names)
-        table_name = TableName(name=clean_str, synonym=clean_str)
+        clean_syn = random.choice(self.synonym_table_names) if self.use_synonyms else clean_str
+        table_name = TableName(name=clean_str, synonym=clean_syn)
 
         fields = random.sample(self.clean_field_names, 2)
         types = [random.choice(self.clean_field_types) for _ in fields]
@@ -119,7 +122,7 @@ class CorruptFeatureTestGenerator:
             order_by_english = f" ordered by {order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
             order_by_fields = [SelectField(order_by_field, direction, order_by_field)]
         
-        english_prompt = f"show me the {fields[0]} and {fields[1]} from the {table_name.name} table{order_by_english}"
+        english_prompt = f"show me the {fields[0]} and {fields[1]} from the {table_name.synonym if self.use_synonyms==True else table_name.name} table{order_by_english}"
         sql_statement = f"SELECT {fields[0]}, {fields[1]} FROM {table_name.name}{order_by_clause}"
         
         return BatchItem(
@@ -208,12 +211,13 @@ class CorruptFeatureTestGenerator:
                 
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
+        current_table = base.table_name.synonym if self.use_synonyms else base.table_name.name
         names = self.novel_table_names if self.use_novel_names else self.clean_table_names
-        wrong_table = random.choice([t for t in names if t != base.table_name.name])
-        corrupted = base.english_prompt.replace(base.table_name.name, wrong_table)
+        wrong_table = random.choice([t for t in names if t != current_table])
+        corrupted = base.english_prompt.replace(current_table, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGTABLENAME, corrupt_english_prompt=corrupted )
-        self.set_clean_corrupt_tokens(item, base.table_name.name, wrong_table, False)
+        self.set_clean_corrupt_tokens(item, current_table, wrong_table, False)
         return item
      
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
@@ -242,8 +246,8 @@ class CorruptFeatureTestGenerator:
     def _corrupt_def_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
         names = self.novel_table_names if self.use_novel_names else self.clean_table_names        
-        wrong_table = random.choice([t for t in names if t != base.table_name.name])
-        corrupted = base.create_statement.replace(base.table_name.name, wrong_table)
+        wrong_table = random.choice([t for t in names if t != base.table_name.synonym])
+        corrupted = base.create_statement.replace(base.table_name.synonym, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFTABLENAME, corrupt_create_statement=corrupted )
         self.set_clean_corrupt_tokens(item, base.table_name.name, wrong_table, True)
