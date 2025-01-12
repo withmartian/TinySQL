@@ -90,10 +90,26 @@ class CorruptFeatureTestGenerator:
         self.use_synonyms = use_synonyms
         
         # Original sample data
-        self.clean_table_names = ["cost", "people", "inventory", "orders", "products"]
-        self.synonym_table_names = {"cost":"expense", "people":"individuals", "inventory":"stock", "orders":"requests", "products":"goods"}
+        self.clean_table_names = ["cost", "people", "inventory", "orders", "products", 
+                                  "status", "favorites", "schedule", "transactions", "users",
+                                   "links", "conversations", "countries", "campaigns"]
+        self.synonym_table_names = synonyms = {"cost": "price", "people": "individuals", "inventory": "stock", "orders": "requests",
+                    "products": "goods", "status": "condition", "favorites": "picks", "schedule": "timetable", "transactions": "deals",
+                    "users": "customers", "links": "connections", "conversations": "discussions", "countries": "nations", "campaigns": "initiatives"
+                    }
         self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
-        self.clean_field_names = ["price", "count", "amount", "total", "name", "id"]
+        self.clean_field_names = keys = ["price", "count", "amount", "total", "name", "id", "uuid", "guid", "external_id",
+                                          "reference_id", "parent_id", "source_id", "target_id","user_id", "customer_id", 
+                                          "order_id", "product_id", "account_id", "session_id","transaction_id"
+                                ]
+        self.synonym_field_names = extended_fields = {"price": "cost", "count": "quantity", "amount": "total", "total": "sum",
+                                        "name": "title", "id": "identifier", "uuid": "global_id", "guid": "universal_id",
+                                        "external_id": "outside_reference", "reference_id": "ref_code", "parent_id": "parent_reference",
+                                        "source_id": "origin_id", "target_id": "destination_id", "user_id": "member_id",
+                                        "customer_id": "client_id", "order_id": "purchase_id", "product_id": "item_id",
+                                        "account_id": "profile_id", "session_id": "session_key", "transaction_id": "payment_id",
+        }
+
         self.novel_field_names = ["hammer", "little", "wolf", "sky", "yellow"]
         self.clean_field_types = ["INT", "CHAR", "TIME", "TEXT", "JSON"]
         
@@ -105,11 +121,13 @@ class CorruptFeatureTestGenerator:
         clean_syn = self.synonym_table_names[clean_str] if self.use_synonyms else clean_str
         table_name = TableName(name=clean_str, synonym=clean_syn)
 
-        fields = random.sample(self.clean_field_names, 2)
+        fields = random.sample(self.clean_field_names, random.randint(1, 5))
+        eng_fields = ' and '.join([self.synonym_field_names[f] for f in fields]) if self.use_synonyms else ' and '.join(fields)
+        crt_fields = ', '.join([f for f in fields])
         types = [random.choice(self.clean_field_types) for _ in fields]
         
         assert fields[0] != fields[1]
-        selected_fields = [TableField(f, t, f) for f, t in zip(fields, types)]
+        selected_fields = [TableField(f, t, self.synonym_field_names[f]) for f, t in zip(fields, types)]
         
         order_by_clause = ""
         order_by_english = ""
@@ -119,18 +137,18 @@ class CorruptFeatureTestGenerator:
             order_by_field = random.choice(fields)
             direction = random.choice(self.directions)
             order_by_clause = f" ORDER BY {order_by_field} {direction}"
-            order_by_english = f" ordered by {order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
+            order_by_english = f" ordered by {self.synonym_field_names[order_by_field] if self.use_synonyms==True else order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
             order_by_fields = [SelectField(order_by_field, direction, order_by_field)]
         
-        english_prompt = f"show me the {fields[0]} and {fields[1]} from the {table_name.synonym if self.use_synonyms==True else table_name.name} table{order_by_english}"
-        sql_statement = f"SELECT {fields[0]}, {fields[1]} FROM {table_name.name}{order_by_clause}"
+        english_prompt = f"show me the {eng_fields} from the {table_name.synonym if self.use_synonyms==True else table_name.name} table{order_by_english}"
+        sql_statement = f"SELECT {crt_fields} FROM {table_name.name}{order_by_clause}"
         
         return BatchItem(
             command_set=2 if self.use_order_by else 1,
             table_name=TableName(name=table_name.name, synonym=table_name.synonym),
             table_fields=selected_fields,
             create_statement=get_sql_create_table_from_selected_fields(table_name, selected_fields)[2],
-            select=[SelectField(f, "", f) for f in fields],
+            select=[SelectField(f, "", self.synonym_field_names[f]) for f in fields],
             order_by=order_by_fields,
             english_prompt=english_prompt,
             sql_statement=sql_statement
@@ -222,8 +240,8 @@ class CorruptFeatureTestGenerator:
      
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        original_field = base.table_fields[0].name
-        base_fields = [field.name for field in base.table_fields]          
+        original_field = base.table_fields[0].synonym if self.use_synonyms else base.table_fields[0].name
+        base_fields = [field.synonym for field in base.table_fields] if self.use_synonyms else [field.name for field in base.table_fields]  
         names = self.novel_field_names if self.use_novel_names else self.clean_field_names
         wrong_field = random.choice([f for f in names if f not in base_fields])
         corrupted = base.english_prompt.replace(original_field, wrong_field)
