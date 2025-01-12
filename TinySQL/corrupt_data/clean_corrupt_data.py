@@ -121,7 +121,7 @@ class CorruptFeatureTestGenerator:
         clean_syn = self.synonym_table_names[clean_str] if self.use_synonyms else clean_str
         table_name = TableName(name=clean_str, synonym=clean_syn)
 
-        fields = random.sample(self.clean_field_names, random.randint(1, 5))
+        fields = random.sample(self.clean_field_names, random.randint(2, 5))
         eng_fields = ' and '.join([self.synonym_field_names[f] for f in fields]) if self.use_synonyms else ' and '.join(fields)
         crt_fields = ', '.join([f for f in fields])
         types = [random.choice(self.clean_field_types) for _ in fields]
