@@ -91,26 +91,55 @@ class CorruptFeatureTestGenerator:
         self.use_synonyms_table = use_synonyms_table
         
         # Original sample data
-        self.clean_table_names = ["cost", "people", "inventory", "orders", "products", 
-                                  "status", "favorites", "schedule", "transactions", "users",
-                                   "links", "conversations", "countries", "campaigns"]
-        self.synonym_table_names = synonyms = {"cost": "price", "people": "individuals", "inventory": "stock", "orders": "requests",
-                    "products": "goods", "status": "condition", "favorites": "picks", "schedule": "timetable", "transactions": "deals",
-                    "users": "customers", "links": "connections", "conversations": "discussions", "countries": "nations", "campaigns": "initiatives"
-                    }
-        self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
-        self.clean_field_names  = ["price", "count", "amount", "total", "name", "id", "uuid", "guid", "external_id",
-                                          "reference_id", "parent_id", "source_id", "target_id","user_id", "customer_id", 
-                                          "order_id", "product_id", "account_id", "session_id","transaction_id"
-                                ]
-        self.synonym_field_names  = {"price": "cost", "count": "quantity", "amount": "total", "total": "sum",
-                                        "name": "title", "id": "identifier", "uuid": "global_id", "guid": "universal_id",
-                                        "external_id": "outside_reference", "reference_id": "ref_code", "parent_id": "parent_reference",
-                                        "source_id": "origin_id", "target_id": "destination_id", "user_id": "member_id",
-                                        "customer_id": "client_id", "order_id": "purchase_id", "product_id": "item_id",
-                                        "account_id": "profile_id", "session_id": "session_key", "transaction_id": "payment_id",
+        self.clean_table_names = ["people", "inventory", "orders", "products", 
+                                        "flights", "favorites", "schedule", "items", "users",
+                                        "links", "messages", "countries", "campaigns"]
+        
+        self.synonym_table_names = {
+            "people": "individuals", 
+            "inventory": "stock", 
+            "orders": "requests",
+            "products": "goods", 
+            "flights": "trips", 
+            "favorites": "picks", 
+            "schedule": "timetable", 
+            "items": "objects",
+            "users": "customers", 
+            "links": "connections", 
+            "messages": "discussions", 
+            "countries": "nations", 
+            "campaigns": "initiatives"
         }
-
+        
+        self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
+        
+        self.clean_field_names = ["price", "count", "amount", "total", "name", "code", 
+                                 "number", "label", "type", "category", "status", 
+                                 "title", "date", "value", "quantity", "rating", 
+                                 "color", "size", "weight", "duration"]
+        
+        self.synonym_field_names = {
+            "price": "cost",
+            "count": "quantity",
+            "amount": "total",
+            "total": "sum",
+            "name": "title",
+            "code": "reference",
+            "number": "identifier",
+            "label": "tag",
+            "type": "category",
+            "category": "class",
+            "status": "state",
+            "title": "heading",
+            "date": "time",
+            "value": "amount",
+            "quantity": "volume",
+            "rating": "score",
+            "color": "shade",
+            "size": "dimension",
+            "weight": "mass",
+            "duration": "period"
+        }
         self.novel_field_names = ["hammer", "little", "wolf", "sky", "yellow"]
         self.clean_field_types = ["INT", "CHAR", "TIME", "TEXT", "JSON"]
         
