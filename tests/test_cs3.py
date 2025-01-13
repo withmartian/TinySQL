@@ -77,7 +77,7 @@ class TestCommandSet3(unittest.TestCase):
 
             # Using answer[i], create a JSON style output
             json_answer = {
-                "table_name": answer[i].table_name,
+                "table_name": answer[i].table_name.name,
                 "table_fields": [table_field.name for table_field in answer[i].table_fields],
                 "select": [select_field.name for select_field in answer[i].select],
                 "order_by": [order_field.name for order_field in answer[i].order_by],
@@ -87,7 +87,7 @@ class TestCommandSet3(unittest.TestCase):
             accuracy = evaluate_cs3_prediction(answer[i], prediction) 
             max_accuracy = self.include_prediction(i, prediction, accuracy, threshold, max_accuracy)
 
-            prediction = "{ """ + answer[i].table_name+ " : [ "
+            prediction = "{ """ + answer[i].table_name.name + " : [ "
             for table_field in answer[i].table_fields:
                 prediction += " """ + table_field.name + " : ""somedata"", "
             prediction += " ] }"
@@ -98,8 +98,12 @@ class TestCommandSet3(unittest.TestCase):
 
 
     def test_generate_csn(self):
-        generate_csn(5, 1, 0.9, False, 2, 6)
-        generate_csn(5, 2, 0.9, False, 3,3)
-        generate_csn(5, 3, 0.9, True, 1, 4)
+        generate_csn(5, 1, 0.9, False, 2, 6, False)
+        generate_csn(5, 2, 0.9, False, 3, 3, False)
+        generate_csn(5, 3, 0.9, True, 1, 4, False)
+
+        generate_csn(5, 1, 0.9, False, 2, 6, True)
+        generate_csn(5, 2, 0.9, False, 3, 3, True)
+        generate_csn(5, 3, 0.9, True, 1, 4, True)        
 
     

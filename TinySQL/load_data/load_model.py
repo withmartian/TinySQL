@@ -18,39 +18,39 @@ def sql_interp_model_location( model_num : int, cs_num : int):
             return "roneneldan/TinyStories-Instruct-2Layers-33M"
 
         elif cs_num == 1:
-            return "withmartian/sql_interp_bm1_cs1_experiment_1.6"
+            return "withmartian/sql_interp_bm1_cs1_experiment_1.10"
  
         elif cs_num == 2:
-            return "withmartian/sql_interp_bm1_cs2_experiment_2.6"
+            return "withmartian/sql_interp_bm1_cs2_experiment_2.10"
 
         elif cs_num == 3:
-            return "withmartian/sql_interp_bm1_cs3_experiment_3.6"
+            return "withmartian/sql_interp_bm1_cs3_experiment_3.10"
         
     elif model_num == 2:
         if cs_num == 0:
             return "Qwen/Qwen2.5-0.5B-Instruct"
 
         elif cs_num == 1:
-            return "withmartian/sql_interp_bm2_cs1_experiment_4.1"
+            return "withmartian/sql_interp_bm2_cs1_experiment_4.2"
  
         elif cs_num == 2:
-            return "withmartian/sql_interp_bm2_cs2_experiment_5.1"
+            return "withmartian/sql_interp_bm2_cs2_experiment_5.2"
 
         elif cs_num == 3:
-            return "withmartian/sql_interp_bm2_cs3_experiment_6.1"
+            return "withmartian/sql_interp_bm2_cs3_experiment_6.2"
         
     elif model_num == 3:
         if cs_num == 0:
             return "withmartian/Llama-3.2-1B-Instruct"
 
         elif cs_num == 1:
-            return "withmartian/sql_interp_bm3_cs1_experiment_7.1"
+            return "withmartian/sql_interp_bm3_cs1_experiment_7.2"
  
         elif cs_num == 2:
-            return "withmartian/sql_interp_bm3_cs2_experiment_8.1"
+            return "withmartian/sql_interp_bm3_cs2_experiment_8.2"
 
         elif cs_num == 3:
-            return "withmartian/sql_interp_bm3_cs3_experiment_9.1"
+            return "withmartian/sql_interp_bm3_cs3_experiment_9.2"
         
     elif model_num == 4: # draft
         return "ibm-granite/granite-3.0-1b-a400m-instruct" # Base "mid-size" model

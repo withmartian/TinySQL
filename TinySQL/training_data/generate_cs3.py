@@ -1,11 +1,11 @@
 from .fragments.models import BatchItem
-from .generate_cs1 import evaluate_cs1_prediction_score_part1, trim_sql_statement, evaluate_unrecognised_words
+from .generate_cs1 import evaluate_cs1_prediction_score_part1, trim_newlines_and_multiple_spaces, evaluate_unrecognised_words
 from .generate_cs2 import evaluate_cs2_prediction_score, generate_cs2
 
 
 # Generate a batch of "command set 3" prompts and answers: SELECT MAX(x1), MIN(x2), x3, SUM(x4) FROM yy ORDER BY zz DESC
-def generate_cs3(batch_size, order_by_clause_probability=0.9, min_cols=2, max_cols=12):
-  return generate_cs2(batch_size, order_by_clause_probability, use_aggregates=True, min_cols=min_cols, max_cols=max_cols)
+def generate_cs3(batch_size, order_by_clause_probability=0.9, min_cols=2, max_cols=12, use_synonyms=False):
+  return generate_cs2(batch_size, order_by_clause_probability, use_aggregates=True, min_cols=min_cols, max_cols=max_cols, use_synonyms=use_synonyms)
 
 
 # Returns accuracy of a "command set 3" predicted answer compared to the ground truth
@@ -60,16 +60,17 @@ def evaluate_cs3_prediction_score(item: BatchItem, predicted_sql_statement: str)
             points_earned += 1
 
     # Criterion: table_name is after FROM 
-    if 'FROM' in test_tokens and item.table_name.upper() in test_tokens:
+    table_str = item.table_name.name.upper()
+    if 'FROM' in test_tokens and table_str in test_tokens:
         from_index = test_tokens.index('FROM')
-        table_name_index = test_tokens.index(item.table_name.upper())
+        table_name_index = test_tokens.index(table_str)
 
         total_points += 1
         if table_name_index > from_index:
             points_earned += 1
 
     # Criterion: There are no unrecognized words 
-    recognized_words = ['SELECT', 'AS', 'FROM', item.table_name.upper()]
+    recognized_words = ['SELECT', 'AS', 'FROM', table_str]
     recognized_words += [field.aggregate_of_field.upper() for field in item.select]
     recognized_words += [field.aggregated_name.upper() for field in item.select if field.aggregate != ""]
     (earned, possible) = evaluate_unrecognised_words(recognized_words, test_tokens)
@@ -81,7 +82,7 @@ def evaluate_cs3_prediction_score(item: BatchItem, predicted_sql_statement: str)
 
 def evaluate_cs3_prediction(item: BatchItem, predicted_sql_statement: str) -> float:
 
-    test_sql_statement = trim_sql_statement(predicted_sql_statement)
+    test_sql_statement = trim_newlines_and_multiple_spaces(predicted_sql_statement).upper()
     if test_sql_statement == "":
         return 0.0
     

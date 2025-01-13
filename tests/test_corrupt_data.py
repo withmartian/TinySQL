@@ -18,10 +18,10 @@ class TestCorruptData(unittest.TestCase):
         for i, example in enumerate(examples, 1):
             print(f"\nExample {i} of {example.feature_name}:")
             if example.feature_name.startswith("Def"):
-                print(f"Clean statement: {example.create_statement}")
+                print(f"Clean statement  : {example.create_statement}")
                 print(f"Corrupt statement: {example.corrupt_create_statement}")
             else:
-                print(f"Clean prompt: {example.english_prompt}")
+                print(f"Clean prompt  : {example.english_prompt}")
                 print(f"Corrupt prompt: {example.corrupt_english_prompt}")
 
             assert example.clean_token_str != ""
@@ -43,14 +43,15 @@ class TestCorruptData(unittest.TestCase):
             assert len(clean_tokens) == len_all_tokens
             assert len(corrupt_tokens) == len_all_tokens
 
+            print(f"Prompt token index: {example.prompt_token_index} {example.answer_token_index} {example.clean_tokenizer_index} {len(clean_tokens)}")
             assert clean_tokens[example.prompt_token_index] == example.clean_tokenizer_index
             assert clean_tokens[example.answer_token_index] == example.clean_tokenizer_index
 
             # PQR TODO This does not work for modelNum==2. Not sure why
             if model_num <= 1: 
                 if corrupt_tokens[example.prompt_token_index] != example.corrupt_tokenizer_index:
-                    print(clean_str.replace('\n', ' '))
-                    print(corrupt_str.replace('\n', ' '))
+                    print(clean_str)
+                    print(corrupt_str)
                     print( "Bad prompt corrupt token:", example.prompt_token_index, example.corrupt_tokenizer_index, corrupt_tokens[example.prompt_token_index], corrupt_tokens)
                     assert False
                 #if corrupt_tokens[example.answer_token_index] != example.corrupt_tokenizer_index:
@@ -81,6 +82,7 @@ class TestCorruptData(unittest.TestCase):
 
         for word in generator.clean_field_types:
             assert len(tokenizer(word)["input_ids"]) == 1
+
 
     def test_m1_generate_ENGTABLENAME(self): 
         self.show_examples(ENGTABLENAME, 1, use_novel_names=False)

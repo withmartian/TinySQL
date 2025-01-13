@@ -81,7 +81,7 @@ for local_model_name, new_repo_name in zip(local_model_names, new_repo_names):
             commit_message=f"Upload {local_model_name} files",
             token=HUGGINGFACE_TOKEN
         )
-        print(f"Model files from '{local_model_path}' have been uploaded to https://huggingface.co/{repo_id}\n")
+        print(f"Model files from '{local_model_path}' have been uploaded to https://huggingface.co/{repo_id}")
     except Exception as e:
-        print(f"Error uploading model from '{local_model_path}' to '{repo_id}': {e}\n")
+        print(f"Error uploading model from '{local_model_path}' to '{repo_id}': {e}")
 
