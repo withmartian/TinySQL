@@ -7,12 +7,12 @@ from datasets import Dataset, DatasetDict
 from TinySQL.training_data.generate_cs1 import generate_cs1, evaluate_cs1_prediction
 from TinySQL.training_data.generate_cs2 import generate_cs2, evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import generate_cs3, evaluate_cs3_prediction
-from TinySQL.training_data.fragments.models import BatchItem, TableField, SelectField, OrderField
+from TinySQL.training_data.fragments.models import TableName, BatchItem, TableField, SelectField, OrderField
 
 def batchitem_to_dict(batch_item):
     d = {}
     d['command_set'] = batch_item.command_set
-    d['table_name'] = batch_item.table_name
+    d['table_name'] = batch_item.table_name.name
     d['create_statement'] = batch_item.create_statement
     d['english_prompt'] = batch_item.english_prompt
     d['sql_statement'] = batch_item.sql_statement
@@ -50,7 +50,7 @@ def dict_to_batchitem(row):
     # Create a new BatchItem instance
     batch_item = BatchItem(
         command_set=row['command_set'],
-        table_name=row['table_name'],
+        table_name=TableName(name=row['table_name'], synonym=row['table_name']),
         table_fields=table_fields,
         create_statement=row['create_statement'],
         select=select_fields,
@@ -61,17 +61,15 @@ def dict_to_batchitem(row):
 
     return batch_item
 
-def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dataset_name):
+def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dataset_name, use_synonyms : bool):
     # Generate dataset using the provided CS function
-    dataset = generate_cs_function(batch_size)
+    dataset = generate_cs_function(batch_size, use_synonyms=use_synonyms)
 
     # Create a dataframe
-    #df = pd.DataFrame(dataset, columns=['english_prompt', 'create_statement', 'sql_statement', 'selected_fields', 'table_fields', 'table_name'])
     dataset_dicts = [batchitem_to_dict(item) for item in dataset]
 
     # Convert to HF dataset
     df = pd.DataFrame(dataset_dicts)
-    #sample = df.iloc[0].to_dict()
     hf_dataset = Dataset.from_pandas(df)
 
     # Split dataset into train + val (90%) and test (10%)
@@ -115,6 +113,9 @@ def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dat
 # Main function
 if __name__ == '__main__':
     batch_size = 100000
-    generate_dataset(batch_size, generate_cs1, evaluate_cs1_prediction, "withmartian/cs1_dataset")
-    generate_dataset(batch_size, generate_cs2, evaluate_cs2_prediction, "withmartian/cs2_dataset")
-    generate_dataset(batch_size, generate_cs3, evaluate_cs3_prediction, "withmartian/cs3_dataset")
+    use_synonyms = True
+    suffix = "_synonyms" if use_synonyms else ""
+
+    generate_dataset(batch_size, generate_cs1, evaluate_cs1_prediction, "withmartian/cs1_dataset" + suffix, use_synonyms)
+    generate_dataset(batch_size, generate_cs2, evaluate_cs2_prediction, "withmartian/cs2_dataset" + suffix, use_synonyms)
+    generate_dataset(batch_size, generate_cs3, evaluate_cs3_prediction, "withmartian/cs3_dataset" + suffix, use_synonyms)
