@@ -226,17 +226,17 @@ class CorruptFeatureTestGenerator:
                     item.prompt_token_index = clean_prompt_tokens.index(item.clean_tokenizer_index)
 
                 # Token position in the predicted answer of the token that may be corrupted
-                if self.use_synonyms_table == True and item.clean_tokenizer_str in self.synonym_table_names.keys() + self.clean_table_names:
+                if self.use_synonyms_table == True and item.clean_token_str in self.synonym_table_names.keys() + self.clean_table_names:
                     if item.clean_tokenizer_index in clean_answer_tokens:
                         item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
                     else:
-                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(self.synonym_table_names[item.clean_tokenizer_index]) - 1
+                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(self.synonym_table_names[item.clean_token_str]) - 1
                
-                if self.use_synonyms_field == True and item.clean_tokenizer_str in self.synonym_field_names.keys() + self.clean_field_names:
+                if self.use_synonyms_field == True and item.clean_token_str in self.synonym_field_names.keys() + self.clean_field_names:
                     if item.clean_tokenizer_index in clean_answer_tokens:
                         item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
                     else:
-                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(self.synonym_field_names[item.clean_tokenizer_index]) - 1
+                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(self.synonym_field_names[item.clean_token_str]) - 1
                        
                 item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
 
