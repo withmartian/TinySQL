@@ -81,7 +81,7 @@ class CorruptibleBatchItem(BatchItem):
 
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, 
-                 tokenizer = None, use_novel_names: bool = False, use_order_by: bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False):
+                 tokenizer = None, use_novel_names: bool = False, use_order_by: bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False, num_fields: int = 2):
         self.model_num = model_num
         self.cs_num = cs_num
         self.tokenizer = tokenizer
@@ -89,6 +89,7 @@ class CorruptFeatureTestGenerator:
         self.use_order_by = use_order_by
         self.use_synonyms_field = use_synonyms_field
         self.use_synonyms_table = use_synonyms_table
+        self.num_fields = num_fields
         
         # Original sample data
         self.clean_table_names = ["people", "inventory", "orders", "products", 
@@ -151,7 +152,7 @@ class CorruptFeatureTestGenerator:
         clean_syn = self.synonym_table_names[clean_str] if self.use_synonyms_table else clean_str
         table_name = TableName(name=clean_str, synonym=clean_syn)
 
-        fields = random.sample(self.clean_field_names, random.randint(2, 5))
+        fields = random.sample(self.clean_field_names, self.num_fields)
         eng_fields = ', '.join([self.synonym_field_names[f] for f in fields[:-1]] if self.use_synonyms_field else fields[:-1]) + ' and ' + (self.synonym_field_names[fields[-1]] if self.use_synonyms_field else fields[-1])
         crt_fields = ', '.join([f for f in fields])
         types = [random.choice(self.clean_field_types) for _ in fields]
