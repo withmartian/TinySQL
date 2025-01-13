@@ -99,11 +99,11 @@ class CorruptFeatureTestGenerator:
                     "users": "customers", "links": "connections", "conversations": "discussions", "countries": "nations", "campaigns": "initiatives"
                     }
         self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
-        self.clean_field_names = keys = ["price", "count", "amount", "total", "name", "id", "uuid", "guid", "external_id",
+        self.clean_field_names  = ["price", "count", "amount", "total", "name", "id", "uuid", "guid", "external_id",
                                           "reference_id", "parent_id", "source_id", "target_id","user_id", "customer_id", 
                                           "order_id", "product_id", "account_id", "session_id","transaction_id"
                                 ]
-        self.synonym_field_names = extended_fields = {"price": "cost", "count": "quantity", "amount": "total", "total": "sum",
+        self.synonym_field_names  = {"price": "cost", "count": "quantity", "amount": "total", "total": "sum",
                                         "name": "title", "id": "identifier", "uuid": "global_id", "guid": "universal_id",
                                         "external_id": "outside_reference", "reference_id": "ref_code", "parent_id": "parent_reference",
                                         "source_id": "origin_id", "target_id": "destination_id", "user_id": "member_id",
@@ -196,9 +196,9 @@ class CorruptFeatureTestGenerator:
 
         if self.tokenizer is not None:      
             item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
-            if self.use_synonyms_table == True:
+            if self.use_synonyms_table == True and item.clean_token_str in self.clean_table_names:
                 syn_index =  self.tokenize_text(self.synonym_table_names[item.clean_token_str])
-            if self.use_synonyms_field == True:
+            if self.use_synonyms_field == True and item.clean_token_str in self.clean_field_names:
                 syn_index =  self.tokenize_text(self.synonym_field_names[item.clean_token_str])
             item.corrupt_tokenizer_index = self.tokenize_text(item.corrupt_token_str)
 
