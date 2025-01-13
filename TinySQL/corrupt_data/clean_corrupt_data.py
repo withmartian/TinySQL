@@ -81,35 +81,65 @@ class CorruptibleBatchItem(BatchItem):
 
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, 
-                 tokenizer = None, use_novel_names: bool = False, use_order_by: bool = False, use_synonyms: bool = False):
+                 tokenizer = None, use_novel_names: bool = False, use_order_by: bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False):
         self.model_num = model_num
         self.cs_num = cs_num
         self.tokenizer = tokenizer
         self.use_novel_names = use_novel_names
         self.use_order_by = use_order_by
-        self.use_synonyms = use_synonyms
+        self.use_synonyms_field = use_synonyms_field
+        self.use_synonyms_table = use_synonyms_table
         
         # Original sample data
-        self.clean_table_names = ["cost", "people", "inventory", "orders", "products", 
-                                  "status", "favorites", "schedule", "transactions", "users",
-                                   "links", "conversations", "countries", "campaigns"]
-        self.synonym_table_names = synonyms = {"cost": "price", "people": "individuals", "inventory": "stock", "orders": "requests",
-                    "products": "goods", "status": "condition", "favorites": "picks", "schedule": "timetable", "transactions": "deals",
-                    "users": "customers", "links": "connections", "conversations": "discussions", "countries": "nations", "campaigns": "initiatives"
-                    }
-        self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
-        self.clean_field_names = keys = ["price", "count", "amount", "total", "name", "id", "uuid", "guid", "external_id",
-                                          "reference_id", "parent_id", "source_id", "target_id","user_id", "customer_id", 
-                                          "order_id", "product_id", "account_id", "session_id","transaction_id"
-                                ]
-        self.synonym_field_names = extended_fields = {"price": "cost", "count": "quantity", "amount": "total", "total": "sum",
-                                        "name": "title", "id": "identifier", "uuid": "global_id", "guid": "universal_id",
-                                        "external_id": "outside_reference", "reference_id": "ref_code", "parent_id": "parent_reference",
-                                        "source_id": "origin_id", "target_id": "destination_id", "user_id": "member_id",
-                                        "customer_id": "client_id", "order_id": "purchase_id", "product_id": "item_id",
-                                        "account_id": "profile_id", "session_id": "session_key", "transaction_id": "payment_id",
+        self.clean_table_names = ["people", "inventory", "orders", "products", 
+                                        "flights", "favorites", "schedule", "items", "users",
+                                        "links", "messages", "countries", "campaigns"]
+        
+        self.synonym_table_names = {
+            "people": "individuals", 
+            "inventory": "stock", 
+            "orders": "requests",
+            "products": "goods", 
+            "flights": "trips", 
+            "favorites": "picks", 
+            "schedule": "timetable", 
+            "items": "objects",
+            "users": "customers", 
+            "links": "connections", 
+            "messages": "discussions", 
+            "countries": "nations", 
+            "campaigns": "initiatives"
         }
-
+        
+        self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
+        
+        self.clean_field_names = ["price", "count", "amount", "total", "name", "code", 
+                                 "number", "label", "type", "category", "status", 
+                                 "title", "date", "value", "quantity", "rating", 
+                                 "color", "size", "weight", "duration"]
+        
+        self.synonym_field_names = {
+            "price": "cost",
+            "count": "quantity",
+            "amount": "total",
+            "total": "sum",
+            "name": "title",
+            "code": "reference",
+            "number": "identifier",
+            "label": "tag",
+            "type": "category",
+            "category": "class",
+            "status": "state",
+            "title": "heading",
+            "date": "time",
+            "value": "amount",
+            "quantity": "volume",
+            "rating": "score",
+            "color": "shade",
+            "size": "dimension",
+            "weight": "mass",
+            "duration": "period"
+        }
         self.novel_field_names = ["hammer", "little", "wolf", "sky", "yellow"]
         self.clean_field_types = ["INT", "CHAR", "TIME", "TEXT", "JSON"]
         
@@ -118,11 +148,11 @@ class CorruptFeatureTestGenerator:
     def _make_base_item(self) -> BatchItem:
         """Create a random clean base item with optional ORDER BY support"""
         clean_str = random.choice(self.clean_table_names)
-        clean_syn = self.synonym_table_names[clean_str] if self.use_synonyms else clean_str
+        clean_syn = self.synonym_table_names[clean_str] if self.use_synonyms_table else clean_str
         table_name = TableName(name=clean_str, synonym=clean_syn)
 
         fields = random.sample(self.clean_field_names, random.randint(2, 5))
-        eng_fields = ', '.join([self.synonym_field_names[f] for f in fields[:-1]] if self.use_synonyms else fields[:-1]) + ' and ' + (self.synonym_field_names[fields[-1]] if self.use_synonyms else fields[-1])
+        eng_fields = ', '.join([self.synonym_field_names[f] for f in fields[:-1]] if self.use_synonyms_field else fields[:-1]) + ' and ' + (self.synonym_field_names[fields[-1]] if self.use_synonyms_field else fields[-1])
         crt_fields = ', '.join([f for f in fields])
         types = [random.choice(self.clean_field_types) for _ in fields]
         
@@ -136,10 +166,10 @@ class CorruptFeatureTestGenerator:
             order_by_field = random.choice(fields)
             direction = random.choice(self.directions)
             order_by_clause = f" ORDER BY {order_by_field} {direction}"
-            order_by_english = f" ordered by {self.synonym_field_names[order_by_field] if self.use_synonyms==True else order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
+            order_by_english = f" ordered by {self.synonym_field_names[order_by_field] if self.use_synonyms_field==True else order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
             order_by_fields = [SelectField(order_by_field, direction, order_by_field)]
         
-        english_prompt = f"show me the {eng_fields} from the {table_name.synonym if self.use_synonyms==True else table_name.name} table{order_by_english}"
+        english_prompt = f"show me the {eng_fields} from the {table_name.synonym if self.use_synonyms_table==True else table_name.name} table{order_by_english}"
         sql_statement = f"SELECT {crt_fields} FROM {table_name.name}{order_by_clause}"
         
         return BatchItem(
@@ -191,9 +221,14 @@ class CorruptFeatureTestGenerator:
         item.clean_token_str = clean_token
         item.corrupt_token_str = corrupt_token
         item.use_novel_names = self.use_novel_names
+        
 
         if self.tokenizer is not None:      
             item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
+            if self.use_synonyms_table == True and item.clean_token_str in self.clean_table_names:
+                syn_index =  self.tokenize_text(self.synonym_table_names[item.clean_token_str])
+            if self.use_synonyms_field == True and item.clean_token_str in self.clean_field_names:
+                syn_index =  self.tokenize_text(self.synonym_field_names[item.clean_token_str])
             item.corrupt_tokenizer_index = self.tokenize_text(item.corrupt_token_str)
 
             # Check the tokens can be tokenized by the tokenizer
@@ -205,9 +240,10 @@ class CorruptFeatureTestGenerator:
                 clean_answer_str = item.clean_BatchItem.sql_statement           
                 clean_prompt_tokens = self.tokenizer(clean_prompt_str)["input_ids"]
                 clean_answer_tokens = self.tokenizer(clean_answer_str)["input_ids"]
+                    
 
                 # Tokenize prompt and answer strings to find the index of the clean token in the tokenized strings.
-                if second_occurrence:
+                if second_occurrence and self.use_synonyms_field == False and self.use_synonyms_table == False:
                     # Find the second instance of the clean token in clean_prompt_tokens
                     occurrences = [i for i, token in enumerate(clean_prompt_tokens) if token == item.clean_tokenizer_index]
                     if len(occurrences) > 1:
@@ -223,30 +259,42 @@ class CorruptFeatureTestGenerator:
                     item.prompt_token_index = clean_prompt_tokens.index(item.clean_tokenizer_index)
 
                 # Token position in the predicted answer of the token that may be corrupted
+                if self.use_synonyms_table == True and item.clean_token_str in list(self.synonym_table_names.keys()) + self.clean_table_names:
+                    if item.clean_tokenizer_index in clean_answer_tokens:
+                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
+                    else:
+                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
+               
+                if self.use_synonyms_field == True and item.clean_token_str in list(self.synonym_field_names.keys()) + self.clean_field_names:
+                    if item.clean_tokenizer_index in clean_answer_tokens:
+                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
+                    else:
+                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
+                       
                 item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
 
                 
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        current_table = base.table_name.synonym if self.use_synonyms else base.table_name.name
+        current_table = base.table_name.synonym if self.use_synonyms_table else base.table_name.name
         names = self.novel_table_names if self.use_novel_names else self.clean_table_names
         wrong_table = random.choice([t for t in names if t != current_table])
         corrupted = base.english_prompt.replace(current_table, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGTABLENAME, corrupt_english_prompt=corrupted )
-        self.set_clean_corrupt_tokens(item, current_table, wrong_table, False)
+        self.set_clean_corrupt_tokens(item, base.table_name.name, wrong_table, False)
         return item
      
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        original_field = base.table_fields[0].synonym if self.use_synonyms else base.table_fields[0].name
-        base_fields = [field.synonym for field in base.table_fields] if self.use_synonyms else [field.name for field in base.table_fields]  
+        original_field = base.table_fields[0].synonym if self.use_synonyms_field else base.table_fields[0].name
+        base_fields = [field.synonym for field in base.table_fields] if self.use_synonyms_field else [field.name for field in base.table_fields]  
         names = self.novel_field_names if self.use_novel_names else self.clean_field_names
         wrong_field = random.choice([f for f in names if f not in base_fields])
         corrupted = base.english_prompt.replace(original_field, wrong_field)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGFIELDNAME, corrupt_english_prompt=corrupted )
-        self.set_clean_corrupt_tokens(item, original_field, wrong_field, False)
+        self.set_clean_corrupt_tokens(item, base.table_fields[0].name, wrong_field, False)
         return item    
     
     def _corrupt_def_create_table(self) -> CorruptibleBatchItem:
