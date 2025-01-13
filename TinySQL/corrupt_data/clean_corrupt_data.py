@@ -196,7 +196,10 @@ class CorruptFeatureTestGenerator:
 
         if self.tokenizer is not None:      
             item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
-            syn_index =  self.tokenize_text(self.synonym_field_names[item.clean_token_str])
+            if self.use_synonyms_table == True:
+                syn_index =  self.tokenize_text(self.synonym_table_names[item.clean_token_str])
+            if self.use_synonyms_field == True:
+                syn_index =  self.tokenize_text(self.synonym_field_names[item.clean_token_str])
             item.corrupt_tokenizer_index = self.tokenize_text(item.corrupt_token_str)
 
             # Check the tokens can be tokenized by the tokenizer
