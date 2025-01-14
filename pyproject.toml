@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "TinySQL"
-version = "1.0"
-description = "Tools for use with the quanta text to sql project"
+version = "1.1"
+description = "Tools for use with the TinySQL project"
 authors = [{name = "Philip Quirke et al", email = "philipquirkenz@gmail.com"}]
 keywords = ["SQL", "machine learning", "text to SQL", "interpretable AI"]
 readme = "README.md"  

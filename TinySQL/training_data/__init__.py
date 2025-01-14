@@ -43,3 +43,5 @@ from .generate_cs3 import generate_cs3, evaluate_cs3_prediction, evaluate_cs3_pr
 from .generate_csn import generate_csn
 
 from .generate_utils import (generate_inputs_from_prompt, generate_inputs_from_BatchItems, output_inference_text)
+
+from .generate_datasets import batchitem_to_dict, dict_to_batchitem, generate_dataset 

@@ -73,12 +73,17 @@ class TestCommandSet3(unittest.TestCase):
 
         batch_size = 1000
         answer = generate_cs3(batch_size)  
+        print(len(answer))
         for i in range(batch_size):
 
             # Using answer[i], create a JSON style output
             json_answer = {
                 "table_name": answer[i].table_name.name,
+                "table_name_synonym": answer[i].table_name.synonym, # May be identical to table_name 
+                "table_name_use_synonym": answer[i].table_name.use_synonym,
                 "table_fields": [table_field.name for table_field in answer[i].table_fields],
+                "table_field_synonyms": [table_field.synonym for table_field in answer[i].table_fields], # May be identical to table_fields                 
+                "table_field_use_synonyms": [table_field.use_synonym for table_field in answer[i].table_fields],               
                 "select": [select_field.name for select_field in answer[i].select],
                 "order_by": [order_field.name for order_field in answer[i].order_by],
                 "english_prompt": answer[i].english_prompt

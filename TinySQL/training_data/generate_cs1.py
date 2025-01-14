@@ -23,7 +23,8 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField], us
     template = get_english_select_from_phrase()
     
     # Decide table name: 80% chance to use synonym if use_synonyms is True.
-    if use_synonyms and random.random() < 0.8:
+    table_name.use_synonym = use_synonyms and random.random() < 0.8
+    if table_name.use_synonym:
         table_str = table_name.synonym
     else:
         table_str = table_name.name
@@ -46,7 +47,8 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField], us
             phrases = get_english_count_phrases()
 
         # Decide field name: 50% chance to use synonym if use_synonyms is True.
-        if use_synonyms and random.random() < 0.5:
+        field.use_synonym = use_synonyms and random.random() < 0.5
+        if field.use_synonym:
             field_str = field.synonym
         else:
             field_str = field.name
@@ -68,7 +70,7 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField], us
     # Create the final English phrase
     english = template.replace("[fields]", english_fields).replace("[table]", table_str)
     
-    return english
+    return (english, table_name, fields)
 
 
 # Generate a batch of "command set 1" prompts and answers. These are SQL SELECT statements with a single table and a few fields.
@@ -80,11 +82,11 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms=False) -> lis
 
         (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, False)
 
-        english_select_from_prompt = get_english_select_from(table_name, selected_fields, use_synonyms)
+        (english_select_from_prompt, table_name, selected_fields) = get_english_select_from(table_name, selected_fields, use_synonyms)
 
         batch_item = BatchItem(
             command_set=1, 
-            table_name=TableName(name=table_name.name, synonym=table_name.synonym),
+            table_name=TableName(name=table_name.name, synonym=table_name.synonym, use_synonym=table_name.use_synonym), 
             table_fields=table_fields,
             create_statement=create_table_statement,
             select=selected_fields,

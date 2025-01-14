@@ -27,10 +27,10 @@ class TestCommandSet1(unittest.TestCase):
 
         (select_fields, _) = get_sql_select_from(table_name, table_fields, False)
 
-        english_select_from = get_english_select_from(table_name, select_fields, False)
+        (english_select_from, table_name, select_fields) = get_english_select_from(table_name, select_fields, False)
         print( "English select (no synonyms):", english_select_from )
 
-        english_select_from = get_english_select_from(table_name, select_fields, True)
+        (english_select_from, table_name, select_fields) = get_english_select_from(table_name, select_fields, True)
         print( "English select (with synonyms):", english_select_from )
 
     # The "ground truth" should score 100%  

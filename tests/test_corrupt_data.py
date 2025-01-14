@@ -59,7 +59,12 @@ class TestCorruptData(unittest.TestCase):
                 #    assert False
 
         return generator, examples
- 
+
+    def check_words_are_one_token(self, prefix, tokenizer, words):
+        for word in words:
+            if len(tokenizer(word)["input_ids"]) != 1:
+                print(prefix, "Word not 1 token:", word)
+                assert False
 
     # Check that all the clean and corrupt tokens are single tokens
     # So that when we generate the paired clean and corrupt examples, they have the same number of tokens  
@@ -68,21 +73,13 @@ class TestCorruptData(unittest.TestCase):
          
         generator = CorruptFeatureTestGenerator(model_num=1, cs_num=2, tokenizer=tokenizer, use_novel_names=True)
 
-        for word in generator.clean_table_names:
-            assert len(tokenizer(word)["input_ids"]) == 1
-
-        for word in generator.novel_table_names:
-            assert len(tokenizer(word)["input_ids"]) == 1
-
-        for word in generator.clean_field_names:
-            assert len(tokenizer(word)["input_ids"]) == 1
-
-        for word in generator.novel_field_names:
-            assert len(tokenizer(word)["input_ids"]) == 1
-
-        for word in generator.clean_field_types:
-            assert len(tokenizer(word)["input_ids"]) == 1
-
+        self.check_words_are_one_token("clean_table_name", tokenizer, generator.clean_table_names)   
+        self.check_words_are_one_token("novel_table_name", tokenizer, generator.novel_table_names)
+        self.check_words_are_one_token("synonym_table_name", tokenizer, generator.synonym_table_names)
+        self.check_words_are_one_token("clean_field_name", tokenizer, generator.clean_field_names)
+        self.check_words_are_one_token("novel_field_name", tokenizer, generator.novel_field_names)
+        self.check_words_are_one_token("synonym_field_name", tokenizer, generator.synonym_field_names)
+        self.check_words_are_one_token("clean_field_type", tokenizer, generator.clean_field_types)
 
     def test_m1_generate_ENGTABLENAME(self): 
         self.show_examples(ENGTABLENAME, 1, use_novel_names=False)

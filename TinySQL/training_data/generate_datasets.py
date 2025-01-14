@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql')
+#sys.path.append('/mnt/foundation-shared/dhruv_gretel_ai/research/sql/quanta_text_to_sql')
 
 import pandas as pd
 import json
@@ -12,7 +12,11 @@ from TinySQL.training_data.fragments.models import TableName, BatchItem, TableFi
 def batchitem_to_dict(batch_item):
     d = {}
     d['command_set'] = batch_item.command_set
+    
     d['table_name'] = batch_item.table_name.name
+    d['table_name_synonym'] = batch_item.table_name.synonym
+    d['table_name_use_synonym'] = batch_item.table_name.use_synonym
+
     d['create_statement'] = batch_item.create_statement
     d['english_prompt'] = batch_item.english_prompt
     d['sql_statement'] = batch_item.sql_statement
@@ -32,7 +36,7 @@ def batchitem_to_dict(batch_item):
     return d
 
 def dict_to_batchitem(row):
-    # Reconstruct 'table_fields' from JSON string to list of TableField objects
+   # Reconstruct 'table_fields' from JSON string to list of TableField objects
     table_fields_list = json.loads(row['table_fields'])
     table_fields = [TableField(**tf_dict) for tf_dict in table_fields_list]
 
@@ -50,7 +54,7 @@ def dict_to_batchitem(row):
     # Create a new BatchItem instance
     batch_item = BatchItem(
         command_set=row['command_set'],
-        table_name=TableName(name=row['table_name'], synonym=row['table_name']),
+        table_name=TableName(name=row['table_name'], synonym=row['table_name_synonym'], use_synonym=row['table_name_use_synonym']), 
         table_fields=table_fields,
         create_statement=row['create_statement'],
         select=select_fields,
@@ -61,7 +65,7 @@ def dict_to_batchitem(row):
 
     return batch_item
 
-def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dataset_name, use_synonyms : bool):
+def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dataset_name, use_synonyms : bool, push_to_hf : bool):
     # Generate dataset using the provided CS function
     dataset = generate_cs_function(batch_size, use_synonyms=use_synonyms)
 
@@ -91,16 +95,16 @@ def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dat
     })
 
     # Push to HF
-    hf_dataset.push_to_hub(dataset_name)
+    if push_to_hf:
+        hf_dataset.push_to_hub(dataset_name)
 
     # Unit tests for the dataset (on the train set as an example)
     accuracy = 0
-    debug = False
     for i in range(len(train_dataset)):
         sample = train_dataset[i]
         item = dict_to_batchitem(sample)
         score = evaluate_cs_function(item, sample['sql_statement'])
-        if debug or score < 1:
+        if (not push_to_hf) or score < 1:
             print("Table:", sample['table_name'])
             print("Table fields:", sample['table_fields'])
             print("Create:", sample['create_statement'])
@@ -116,6 +120,6 @@ if __name__ == '__main__':
     use_synonyms = True
     suffix = "_synonyms" if use_synonyms else ""
 
-    generate_dataset(batch_size, generate_cs1, evaluate_cs1_prediction, "withmartian/cs1_dataset" + suffix, use_synonyms)
-    generate_dataset(batch_size, generate_cs2, evaluate_cs2_prediction, "withmartian/cs2_dataset" + suffix, use_synonyms)
-    generate_dataset(batch_size, generate_cs3, evaluate_cs3_prediction, "withmartian/cs3_dataset" + suffix, use_synonyms)
+    generate_dataset(batch_size, generate_cs1, evaluate_cs1_prediction, "withmartian/cs1_dataset" + suffix, use_synonyms, True)
+    generate_dataset(batch_size, generate_cs2, evaluate_cs2_prediction, "withmartian/cs2_dataset" + suffix, use_synonyms, True)
+    generate_dataset(batch_size, generate_cs3, evaluate_cs3_prediction, "withmartian/cs3_dataset" + suffix, use_synonyms, True)
