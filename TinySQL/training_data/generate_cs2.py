@@ -14,7 +14,8 @@ def generate_cs2(batch_size, order_by_clause_probability=0.9, use_aggregates=Fal
         (table_name, table_fields, create_table_statement) = get_sql_create_table(min_cols=min_cols, max_cols=max_cols)
 
         (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, use_aggregates)
-        english_select_from_prompt = get_english_select_from(table_name, selected_fields, use_synonyms)
+        
+        (english_select_from_prompt, table_name, selected_fields) = get_english_select_from(table_name, selected_fields, use_synonyms)
 
         # Randomly decide whether to include an ORDER BY clause
         include_order_by = i < batch_size * order_by_clause_probability
@@ -28,7 +29,7 @@ def generate_cs2(batch_size, order_by_clause_probability=0.9, use_aggregates=Fal
 
         batch_item = BatchItem(
             command_set=2,
-            table_name=TableName(name=table_name.name, synonym=table_name.synonym),
+            table_name=TableName(name=table_name.name, synonym=table_name.synonym, use_synonym=table_name.use_synonym), 
             table_fields=table_fields,
             create_statement=create_table_statement,
             select=selected_fields,

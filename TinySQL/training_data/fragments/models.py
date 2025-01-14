@@ -7,13 +7,15 @@ class TableField:
     """Represents a field and its metadata"""
     name: str
     type: str # INTEGER, BIGINT, DECIMAL, NUMERIC, FLOAT, DOUBLE, VARCHAR, CHAR, TEXT, DATE, DATETIME, TIMESTAMP, BOOLEAN, UUID, BLOB, JSON, JSONB
-    synonym: str # english synonyms for the field name
+    synonym: str # english synonym for the field name
+    use_synonym: bool = False # whether to use the synonym in the Instructions (english statement)
 
 @dataclass
 class TableName:
     """Represents a table and a synonym"""
     name: str
     synonym: str # english synonym for the table name
+    use_synonym: bool = False # whether to use the synonym in the Instructions (english statement)
 
 
 @dataclass
@@ -21,6 +23,7 @@ class SelectField:
     name: str
     aggregate: str # SUM, AVG, MIN, MAX, COUNT, ""
     synonym: str # english synonym for the field name
+    use_synonym: bool = False # whether to use the synonym in the Instructions (english statement)
 
     @property
     def aggregate_of_field(self):

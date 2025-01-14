@@ -93,30 +93,39 @@ class CorruptFeatureTestGenerator:
         
         # Original sample data
         self.clean_table_names = ["people", "inventory", "orders", "products", 
-                                        "flights", "favorites", "schedule", "items", "users",
-                                        "links", "messages", "countries", "campaigns"]
+                                        # "flights", not 1 token 
+                                        #"favorites", 
+                                        #"schedule", 
+                                        "items", "users",
+                                        "links", 
+                                        #"messages", 
+                                        #"countries", 
+                                        #"campaigns"
+                                        ]
         
         self.synonym_table_names = {
             "people": "individuals", 
             "inventory": "stock", 
             "orders": "requests",
             "products": "goods", 
-            "flights": "trips", 
-            "favorites": "picks", 
-            "schedule": "timetable", 
+            #"flights": "trips", 
+            #"favorites": "picks", 
+            #"schedule": "timetable", 
             "items": "objects",
             "users": "customers", 
             "links": "connections", 
-            "messages": "discussions", 
-            "countries": "nations", 
-            "campaigns": "initiatives"
+            #"messages": "discussions", 
+            #"countries": "nations", 
+            #"campaigns": "initiatives"
         }
         
         self.novel_table_names = ["star", "very", "apple", "blue", "orange"]
         
         self.clean_field_names = ["price", "count", "amount", "total", "name", "code", 
                                  "number", "label", "type", "category", "status", 
-                                 "title", "date", "value", "quantity", "rating", 
+                                 "title", "date", "value", 
+                                 # "quantity", Not 1 token 
+                                 "rating", 
                                  "color", "size", "weight", "duration"]
         
         self.synonym_field_names = {
@@ -134,7 +143,7 @@ class CorruptFeatureTestGenerator:
             "title": "heading",
             "date": "time",
             "value": "amount",
-            "quantity": "volume",
+            #"quantity": "volume",
             "rating": "score",
             "color": "shade",
             "size": "dimension",
@@ -167,10 +176,10 @@ class CorruptFeatureTestGenerator:
             order_by_field = random.choice(fields)
             direction = random.choice(self.directions)
             order_by_clause = f" ORDER BY {order_by_field} {direction}"
-            order_by_english = f" ordered by {self.synonym_field_names[order_by_field] if self.use_synonyms_field==True else order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
+            order_by_english = f" ordered by {self.synonym_field_names[order_by_field] if self.use_synonyms_field else order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
             order_by_fields = [SelectField(order_by_field, direction, order_by_field)]
         
-        english_prompt = f"show me the {eng_fields} from the {table_name.synonym if self.use_synonyms_table==True else table_name.name} table{order_by_english}"
+        english_prompt = f"show me the {eng_fields} from the {table_name.synonym if self.use_synonyms_table else table_name.name} table{order_by_english}"
         sql_statement = f"SELECT {crt_fields} FROM {table_name.name}{order_by_clause}"
         
         return BatchItem(
