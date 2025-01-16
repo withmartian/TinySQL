@@ -31,7 +31,7 @@ class CorruptibleBatchItem(BatchItem):
     def clean_BatchItem(self) -> BatchItem:
         return BatchItem(
             command_set=self.command_set,
-            table_name=TableName(name=self.table_name.name, synonym=self.table_name.synonym),
+            table_name=TableName(name=self.table_name.name, synonym=self.table_name.synonym, use_synonym=self.table_name.use_synonym),
             table_fields=self.table_fields,
             create_statement=self.create_statement,
             select=self.select,
@@ -44,7 +44,7 @@ class CorruptibleBatchItem(BatchItem):
     def corrupt_BatchItem(self) -> BatchItem:
         return BatchItem(
             command_set=self.command_set,
-            table_name=TableName(name=self.table_name.name, synonym=self.table_name.synonym),
+            table_name=TableName(name=self.table_name.name, synonym=self.table_name.synonym, use_synonym=self.table_name.use_synonym),
             table_fields=self.table_fields,
             create_statement=self.corrupt_create_statement or self.create_statement,
             select=self.select,
@@ -104,7 +104,7 @@ class CorruptFeatureTestGenerator:
                                         ]
         
         self.synonym_table_names = {
-            "people": "individuals", 
+            "people": "children", 
             "inventory": "stock", 
             "orders": "requests",
             "products": "goods", 
@@ -235,9 +235,9 @@ class CorruptFeatureTestGenerator:
 
         if self.tokenizer is not None:      
             item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
-            if self.use_synonyms_table == True and item.clean_token_str in self.clean_table_names:
+            if self.use_synonyms_table and item.clean_token_str in self.clean_table_names:
                 syn_index =  self.tokenize_text(self.synonym_table_names[item.clean_token_str])
-            if self.use_synonyms_field == True and item.clean_token_str in self.clean_field_names:
+            if self.use_synonyms_field and item.clean_token_str in self.clean_field_names:
                 syn_index =  self.tokenize_text(self.synonym_field_names[item.clean_token_str])
             item.corrupt_tokenizer_index = self.tokenize_text(item.corrupt_token_str)
 
@@ -253,7 +253,7 @@ class CorruptFeatureTestGenerator:
                     
 
                 # Tokenize prompt and answer strings to find the index of the clean token in the tokenized strings.
-                if second_occurrence and self.use_synonyms_field == False and self.use_synonyms_table == False:
+                if second_occurrence and not self.use_synonyms_field and not self.use_synonyms_table:
                     # Find the second instance of the clean token in clean_prompt_tokens
                     occurrences = [i for i, token in enumerate(clean_prompt_tokens) if token == item.clean_tokenizer_index]
                     if len(occurrences) > 1:
@@ -269,13 +269,13 @@ class CorruptFeatureTestGenerator:
                     item.prompt_token_index = clean_prompt_tokens.index(item.clean_tokenizer_index)
 
                 # Token position in the predicted answer of the token that may be corrupted
-                if self.use_synonyms_table == True and item.clean_token_str in list(self.synonym_table_names.keys()) + self.clean_table_names:
+                if self.use_synonyms_table and item.clean_token_str in list(self.synonym_table_names.keys()) + self.clean_table_names:
                     if item.clean_tokenizer_index in clean_answer_tokens:
                         item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
                     else:
                         item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
                
-                if self.use_synonyms_field == True and item.clean_token_str in list(self.synonym_field_names.keys()) + self.clean_field_names:
+                if self.use_synonyms_field and item.clean_token_str in list(self.synonym_field_names.keys()) + self.clean_field_names:
                     if item.clean_tokenizer_index in clean_answer_tokens:
                         item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
                     else:
