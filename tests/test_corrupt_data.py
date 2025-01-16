@@ -1,14 +1,21 @@
 import unittest
 from TinySQL.load_data import load_sql_interp_model
-from TinySQL import UNKNOWN_VALUE, ENGTABLENAME, ENGFIELDNAME, DEFCREATETABLE, DEFTABLENAME, DEFFIELDSEPARATOR, DEFFIELDNAME, CorruptFeatureTestGenerator
+from TinySQL import UNKNOWN_VALUE, ENGTABLENAME, ENGFIELDNAME, DEFTABLENAME, DEFFIELDNAME, CorruptFeatureTestGenerator
 from tests.test_util import TEST_DEVICE_MAP
 
 class TestCorruptData(unittest.TestCase):
 
-    def show_examples(self, feature_name, model_num, cs_num=1, use_novel_names=False):
+    def show_examples(self, feature_name, model_num, cs_num=1, use_novel_names=False, use_synonyms_field=False, use_synonyms_table=False):
         tokenizer, _ = load_sql_interp_model(model_num, cs_num, use_flash_attention=False, device_map=TEST_DEVICE_MAP)
          
-        generator = CorruptFeatureTestGenerator(model_num=model_num, cs_num=cs_num, tokenizer=tokenizer, use_novel_names=use_novel_names)
+        print( "show_examples(): use_novel_names:", use_novel_names, "use_synonyms_field:", use_synonyms_field, "use_synonyms_table:", use_synonyms_table)         
+        generator = CorruptFeatureTestGenerator(
+            model_num=model_num, 
+            cs_num=cs_num, 
+            tokenizer=tokenizer, 
+            use_novel_names=use_novel_names, 
+            use_synonyms_field=use_synonyms_field,
+            use_synonyms_table=use_synonyms_table)
 
         batch_size = 5
         examples = generator.generate_feature_examples(feature_name, batch_size)      
@@ -36,35 +43,54 @@ class TestCorruptData(unittest.TestCase):
 
             clean_str = example.clean_BatchItem.get_alpaca_prompt() + example.clean_BatchItem.sql_statement
             corrupt_str = example.corrupt_BatchItem.get_alpaca_prompt() + example.corrupt_BatchItem.sql_statement
+            if clean_str == corrupt_str:
+                print("Clean  :", clean_str)
+                print("Corrupt:", corrupt_str)
+                assert False
+
             clean_tokens = tokenizer(clean_str)["input_ids"]
             corrupt_tokens = tokenizer(corrupt_str)["input_ids"]
+            if clean_tokens == corrupt_tokens:
+                print(clean_tokens)
+                print(corrupt_tokens)
+                assert False
+
+            if example.clean_tokenizer_index == example.corrupt_tokenizer_index:
+                print(example.clean_tokenizer_index)
+                print(example.corrupt_tokenizer_index)
+                assert False
 
             # All (clean or corrupt) examples should have the same prompt+answer length
             assert len(clean_tokens) == len_all_tokens
             assert len(corrupt_tokens) == len_all_tokens
 
-            print(f"Prompt token index: {example.prompt_token_index} {example.answer_token_index} {example.clean_tokenizer_index} {len(clean_tokens)}")
+            # Check the clean string tokens have expected clean token in prompt and answer. 
+            print(f"Prompt token index: {example.prompt_token_index} {example.answer_token_index} {len(clean_tokens)} {example.clean_tokenizer_index} ")
             assert clean_tokens[example.prompt_token_index] == example.clean_tokenizer_index
             assert clean_tokens[example.answer_token_index] == example.clean_tokenizer_index
 
+            # Check the corrupt string tokens have expected corrupt token in prompt 
             # PQR TODO This does not work for modelNum==2. Not sure why
-            if model_num <= 1: 
-                if corrupt_tokens[example.prompt_token_index] != example.corrupt_tokenizer_index:
-                    print(clean_str)
-                    print(corrupt_str)
-                    print( "Bad prompt corrupt token:", example.prompt_token_index, example.corrupt_tokenizer_index, corrupt_tokens[example.prompt_token_index], corrupt_tokens)
+            if model_num == 1: 
+                prompt_corrupt_token = corrupt_tokens[example.prompt_token_index]
+                if prompt_corrupt_token != example.corrupt_tokenizer_index:
+                    print("Bad prompt corrupt token[", example.prompt_token_index, "]")
+                    print("Clean  :", clean_str)
+                    print("Corrupt:", corrupt_str)
+                    print("Want:", tokenizer.decode(example.corrupt_tokenizer_index)) 
+                    print("Found:", tokenizer.decode(prompt_corrupt_token)) 
                     assert False
-                #if corrupt_tokens[example.answer_token_index] != example.corrupt_tokenizer_index:
-                #    print("Bad answer corrupt token:", example.answer_token_index, example.corrupt_tokenizer_index, corrupt_tokens[example.answer_token_index], corrupt_tokens)
-                #    assert False
 
         return generator, examples
 
+    def check_word_is_one_token(self, prefix, tokenizer, word):
+        if len(tokenizer(word)["input_ids"]) != 1:
+            print(prefix, "Word not 1 token:", word)
+            assert False
+
     def check_words_are_one_token(self, prefix, tokenizer, words):
         for word in words:
-            if len(tokenizer(word)["input_ids"]) != 1:
-                print(prefix, "Word not 1 token:", word)
-                assert False
+            self.check_word_is_one_token(prefix, tokenizer, word)
 
     # Check that all the clean and corrupt tokens are single tokens
     # So that when we generate the paired clean and corrupt examples, they have the same number of tokens  
@@ -75,20 +101,30 @@ class TestCorruptData(unittest.TestCase):
 
         self.check_words_are_one_token("clean_table_name", tokenizer, generator.clean_table_names)   
         self.check_words_are_one_token("novel_table_name", tokenizer, generator.novel_table_names)
-        self.check_words_are_one_token("synonym_table_name", tokenizer, generator.synonym_table_names)
+        self.check_words_are_one_token("synonym_table_name.keys", tokenizer, generator.synonym_table_names.keys())
         self.check_words_are_one_token("clean_field_name", tokenizer, generator.clean_field_names)
         self.check_words_are_one_token("novel_field_name", tokenizer, generator.novel_field_names)
-        self.check_words_are_one_token("synonym_field_name", tokenizer, generator.synonym_field_names)
+        self.check_words_are_one_token("synonym_field_name.keys", tokenizer, generator.synonym_field_names.keys())
         self.check_words_are_one_token("clean_field_type", tokenizer, generator.clean_field_types)
 
-    def test_m1_generate_ENGTABLENAME(self): 
-        self.show_examples(ENGTABLENAME, 1, use_novel_names=False)
-        self.show_examples(ENGTABLENAME, 1, use_novel_names=True)
+        # These are novel words, so they are not in the tokenizer, and will not be one token
+        #for key in generator.synonym_table_names.keys():
+        #    self.check_word_is_one_token("synonym_table_name[key]", tokenizer, generator.synonym_table_names[key])
+        #for key in generator.synonym_field_names.keys():
+        #    self.check_word_is_one_token("synonym_field_name[key]", tokenizer, generator.synonym_field_names[key])
 
+
+    def test_m1_generate_ENGTABLENAME(self): 
+        #self.show_examples(ENGTABLENAME, 1, use_novel_names=False)
+        #self.show_examples(ENGTABLENAME, 1, use_novel_names=True)
+        self.show_examples(ENGTABLENAME, 1, use_novel_names=False, use_synonyms_table=True)
+        #self.show_examples(ENGTABLENAME, 1, use_novel_names=True, use_synonyms_table=True)
 
     def test_m1_generate_ENGFIELDNAME(self):   
         self.show_examples(ENGFIELDNAME, 1, use_novel_names=False)
         self.show_examples(ENGFIELDNAME, 1, use_novel_names=True)
+        self.show_examples(ENGFIELDNAME, 1, use_novel_names=False, use_synonyms_field=True)
+        self.show_examples(ENGFIELDNAME, 1, use_novel_names=True, use_synonyms_field=True)
 
     # Suppress until CREATE is in the TinyStories Vocab     
     #def test_generate_DEFCREATETABLE(self):    
@@ -97,6 +133,8 @@ class TestCorruptData(unittest.TestCase):
     def test_m1_generate_DEFTABLENAME(self):   
         self.show_examples(DEFTABLENAME, 1, use_novel_names=False)
         self.show_examples(DEFTABLENAME, 1, use_novel_names=True)
+        self.show_examples(DEFTABLENAME, 1, use_novel_names=False, use_synonyms_table=True)
+        self.show_examples(DEFTABLENAME, 1, use_novel_names=True, use_synonyms_table=True)
 
     # Need to debug how "," is tokenized 
     #def test_generate_DEFFIELDSEPARATOR(self):   
@@ -105,8 +143,12 @@ class TestCorruptData(unittest.TestCase):
     def test_m1_generate_DEFFIELDNAME(self):  
         self.show_examples(DEFFIELDNAME, 1, use_novel_names=False)
         self.show_examples(DEFFIELDNAME, 1, use_novel_names=True)
+        self.show_examples(DEFFIELDNAME, 1, use_novel_names=False, use_synonyms_field=True)
+        self.show_examples(DEFFIELDNAME, 1, use_novel_names=True, use_synonyms_field=True)
 
     def test_m2_generate_DEFFIELDNAME(self):  
         self.show_examples(DEFFIELDNAME, 2, use_novel_names=False)
         self.show_examples(DEFFIELDNAME, 2, use_novel_names=True)
+        self.show_examples(DEFFIELDNAME, 2, use_novel_names=False, use_synonyms_field=True)
+        self.show_examples(DEFFIELDNAME, 2, use_novel_names=True, use_synonyms_field=True)
 
