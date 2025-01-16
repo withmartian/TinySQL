@@ -115,10 +115,10 @@ class TestCorruptData(unittest.TestCase):
 
 
     def test_m1_generate_ENGTABLENAME(self): 
-        #self.show_examples(ENGTABLENAME, 1, use_novel_names=False)
-        #self.show_examples(ENGTABLENAME, 1, use_novel_names=True)
-        self.show_examples(ENGTABLENAME, 1, use_novel_names=False, use_synonyms_table=True)
-        #self.show_examples(ENGTABLENAME, 1, use_novel_names=True, use_synonyms_table=True)
+        self.show_examples(ENGTABLENAME, 1, use_novel_names=False, use_synonyms_table=True) # This fails
+        self.show_examples(ENGTABLENAME, 1, use_novel_names=True, use_synonyms_table=True)
+        self.show_examples(ENGTABLENAME, 1, use_novel_names=False)
+        self.show_examples(ENGTABLENAME, 1, use_novel_names=True)
 
     def test_m1_generate_ENGFIELDNAME(self):   
         self.show_examples(ENGFIELDNAME, 1, use_novel_names=False)
