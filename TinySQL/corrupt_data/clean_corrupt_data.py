@@ -22,10 +22,18 @@ class CorruptibleBatchItem(BatchItem):
     corrupt_tokenizer_index: int = UNKNOWN_VALUE # Tokenizer vocab index for corrupted word    
     prompt_token_index: int = UNKNOWN_VALUE # Token index in (english or create table) prompt of clean/corrupt word
     answer_token_index: int = UNKNOWN_VALUE # Token index in prediction (sql command) answer of clean/corrupt word
-    corrupt_english_prompt: Optional[str] = None
-    corrupt_create_statement: Optional[str] = None
-    corrupt_sql_statement: Optional[str] = None
-    use_novel_names: bool = False
+    corrupt_english_prompt: Optional[str] = None # Aka Instruction
+    corrupt_create_statement: Optional[str] = None # Aka Context
+    corrupt_sql_statement: Optional[str] = None # Aka Response or answer
+    use_novel_names: bool = False # Use words not seen in training for the corrupt token
+
+    def corrupt_data_sanity_check(self):
+        if self.feature_name.startswith("Def"):
+            assert self.corrupt_create_statement is not None 
+            assert self.corrupt_create_statement != self.create_statement
+        elif self.feature_name.startswith("Eng"):
+            assert self.corrupt_english_prompt is not None 
+            assert self.corrupt_english_prompt != self.english_prompt
 
     @property
     def clean_BatchItem(self) -> BatchItem:
@@ -42,6 +50,8 @@ class CorruptibleBatchItem(BatchItem):
     
     @property
     def corrupt_BatchItem(self) -> BatchItem:
+        self.corrupt_data_sanity_check()
+
         return BatchItem(
             command_set=self.command_set,
             table_name=TableName(name=self.table_name.name, synonym=self.table_name.synonym, use_synonym=self.table_name.use_synonym),
@@ -64,20 +74,17 @@ class CorruptibleBatchItem(BatchItem):
     def print_all(self):
         print("Feature name:", self.feature_name)
         if self.feature_name.startswith("Def"):
-            print("Clean statement:", self.create_statement )
-            print("Corrupt statement:", self.corrupt_create_statement )
+            print("Clean statement:", self.clean_token_str,  ":", self.create_statement )
+            print("Corrupt statement:", self.corrupt_token_str, ":", self.corrupt_create_statement )
         else:
-            print("Clean prompt:", self.english_prompt)
-            print("Corrupt prompt:", self.corrupt_english_prompt)
-        print("Use novel names:", self.use_novel_names)
-        print("Clean token:", self.clean_token_str)
-        print("Corrupt token:", self.corrupt_token_str)
+            print("Clean  :", self.clean_token_str, ":", self.english_prompt)
+            print("Corrupt:", self.corrupt_token_str, ":", self.corrupt_english_prompt)
         print("Prompt token index:", self.prompt_token_index)
         print("Answer token index:", self.answer_token_index)
         print("Clean tokenizer index:", self.clean_tokenizer_index)
         print("Corrupt tokenizer index:", self.corrupt_tokenizer_index)
-        print(self.get_alpaca_prompt())
-        print(self.sql_statement)       
+        print("Use novel names:", self.use_novel_names)
+     
 
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, 
@@ -159,7 +166,7 @@ class CorruptFeatureTestGenerator:
         """Create a random clean base item with optional ORDER BY support"""
         clean_str = random.choice(self.clean_table_names)
         clean_syn = self.synonym_table_names[clean_str] if self.use_synonyms_table else clean_str
-        table_name = TableName(name=clean_str, synonym=clean_syn)
+        table_name = TableName(name=clean_str, synonym=clean_syn, use_synonym=self.use_synonyms_table)
 
         fields = random.sample(self.clean_field_names, self.num_fields)
         eng_fields = ', '.join([self.synonym_field_names[f] for f in fields[:-1]] if self.use_synonyms_field else fields[:-1]) + ' and ' + (self.synonym_field_names[fields[-1]] if self.use_synonyms_field else fields[-1])
@@ -184,7 +191,7 @@ class CorruptFeatureTestGenerator:
         
         return BatchItem(
             command_set=2 if self.use_order_by else 1,
-            table_name=TableName(name=table_name.name, synonym=table_name.synonym),
+            table_name=TableName(name=table_name.name, synonym=table_name.synonym, use_synonym=table_name.use_synonym),
             table_fields=selected_fields,
             create_statement=get_sql_create_table_from_selected_fields(table_name, selected_fields)[2],
             select=[SelectField(f, "", self.synonym_field_names[f]) for f in fields],
@@ -226,7 +233,7 @@ class CorruptFeatureTestGenerator:
         token = self.tokenizer(" " + text)["input_ids"][answer_offset] # includes a space
         return token
 
-    def set_clean_corrupt_tokens(self, item: CorruptibleBatchItem, clean_token: str, corrupt_token: str, second_occurrence: bool):
+    def set_clean_corrupt_tokens(self, item: CorruptibleBatchItem, clean_token: str, corrupt_token: str, answer_token: str, second_occurrence: bool):
         """Set the clean and corrupt tokens for an item"""
         item.clean_token_str = clean_token
         item.corrupt_token_str = corrupt_token
@@ -235,10 +242,10 @@ class CorruptFeatureTestGenerator:
 
         if self.tokenizer is not None:      
             item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
-            if self.use_synonyms_table and item.clean_token_str in self.clean_table_names:
-                syn_index =  self.tokenize_text(self.synonym_table_names[item.clean_token_str])
-            if self.use_synonyms_field and item.clean_token_str in self.clean_field_names:
-                syn_index =  self.tokenize_text(self.synonym_field_names[item.clean_token_str])
+            #if self.use_synonyms_table and item.clean_token_str in self.clean_table_names:
+            #    syn_index =  self.tokenize_text(self.synonym_table_names[item.clean_token_str])
+            #if self.use_synonyms_field and item.clean_token_str in self.clean_field_names:
+            #    syn_index =  self.tokenize_text(self.synonym_field_names[item.clean_token_str])
             item.corrupt_tokenizer_index = self.tokenize_text(item.corrupt_token_str)
 
             # Check the tokens can be tokenized by the tokenizer
@@ -269,42 +276,47 @@ class CorruptFeatureTestGenerator:
                     item.prompt_token_index = clean_prompt_tokens.index(item.clean_tokenizer_index)
 
                 # Token position in the predicted answer of the token that may be corrupted
-                if self.use_synonyms_table and item.clean_token_str in list(self.synonym_table_names.keys()) + self.clean_table_names:
-                    if item.clean_tokenizer_index in clean_answer_tokens:
-                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
-                    else:
-                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
+                #if self.use_synonyms_table and item.clean_token_str in list(self.synonym_table_names.keys()) + self.clean_table_names:
+                #    if item.clean_tokenizer_index in clean_answer_tokens:
+                #        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
+                #    else:
+                #        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
                
-                if self.use_synonyms_field and item.clean_token_str in list(self.synonym_field_names.keys()) + self.clean_field_names:
-                    if item.clean_tokenizer_index in clean_answer_tokens:
-                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
-                    else:
-                        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
-                       
-                item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
+                #if self.use_synonyms_field and item.clean_token_str in list(self.synonym_field_names.keys()) + self.clean_field_names:
+                #    if item.clean_tokenizer_index in clean_answer_tokens:
+                #        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
+                #    else:
+                #       item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
+                # PQR Doesnt following code override the above 10 lines of code?   
+
+                # If we are using a semantic model, and testing feature EngTableName or EngFieldName, then we clean token will not appear in the answer 
+                answer_tokenizer_index = self.tokenize_text(answer_token)
+                item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(answer_tokenizer_index) - 1
 
                 
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        current_table = base.table_name.synonym if self.use_synonyms_table else base.table_name.name
+        table_str = base.table_name.name_str
         names = self.novel_table_names if self.use_novel_names else self.clean_table_names
-        wrong_table = random.choice([t for t in names if t != current_table])
-        corrupted = base.english_prompt.replace(current_table, wrong_table)
+        wrong_table = random.choice([t for t in names if t != table_str])
+        corrupted = base.english_prompt.replace(table_str, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGTABLENAME, corrupt_english_prompt=corrupted )
-        self.set_clean_corrupt_tokens(item, base.table_name.name, wrong_table, False)
+        # For semantic models, the clean token will not appear in the answer
+        self.set_clean_corrupt_tokens(item, table_str, wrong_table, base.table_name.name, False)
         return item
      
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        original_field = base.table_fields[0].synonym if self.use_synonyms_field else base.table_fields[0].name
+        field_str = base.table_fields[0].name_str
         base_fields = [field.synonym for field in base.table_fields] if self.use_synonyms_field else [field.name for field in base.table_fields]  
         names = self.novel_field_names if self.use_novel_names else self.clean_field_names
         wrong_field = random.choice([f for f in names if f not in base_fields])
-        corrupted = base.english_prompt.replace(original_field, wrong_field)
+        corrupted = base.english_prompt.replace(field_str, wrong_field)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGFIELDNAME, corrupt_english_prompt=corrupted )
-        self.set_clean_corrupt_tokens(item, base.table_fields[0].name, wrong_field, False)
+        # For semantic models, the clean token will not appear in the answer
+        self.set_clean_corrupt_tokens(item, field_str, wrong_field, base.table_fields[0].name, False)
         return item    
     
     def _corrupt_def_create_table(self) -> CorruptibleBatchItem:
@@ -315,7 +327,7 @@ class CorruptFeatureTestGenerator:
         corrupted = base.create_statement.replace("CREATE", wrong_start)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFCREATETABLE, corrupt_create_statement=corrupted )
-        self.set_clean_corrupt_tokens(item, "CREATE", wrong_start, False)    
+        self.set_clean_corrupt_tokens(item, "CREATE", wrong_start, wrong_start, False)    
         return item
 
     def _corrupt_def_table_name(self) -> CorruptibleBatchItem:
@@ -325,7 +337,7 @@ class CorruptFeatureTestGenerator:
         corrupted = base.create_statement.replace(base.table_name.synonym, wrong_table)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFTABLENAME, corrupt_create_statement=corrupted )
-        self.set_clean_corrupt_tokens(item, base.table_name.name, wrong_table, True)
+        self.set_clean_corrupt_tokens(item, base.table_name.name, wrong_table, base.table_name.name, True)
         return item
           
     def _corrupt_def_field_name(self) -> CorruptibleBatchItem:
@@ -339,7 +351,7 @@ class CorruptFeatureTestGenerator:
         corrupted = base.create_statement.replace(original_field, wrong_field)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFFIELDNAME, corrupt_create_statement=corrupted )
-        self.set_clean_corrupt_tokens(item, original_field, wrong_field, True)
+        self.set_clean_corrupt_tokens(item, original_field, wrong_field, original_field, True)
         return item
      
     def _corrupt_def_field_separator(self) -> CorruptibleBatchItem:
@@ -350,5 +362,5 @@ class CorruptFeatureTestGenerator:
         corrupted = base.create_statement.replace(",", wrong_separator)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFFIELDSEPARATOR, corrupt_create_statement=corrupted )   
-        self.set_clean_corrupt_tokens(item, ",", wrong_separator, True)         
+        self.set_clean_corrupt_tokens(item, ",", wrong_separator, ",", True)         
         return item

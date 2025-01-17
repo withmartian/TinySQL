@@ -10,6 +10,11 @@ class TableField:
     synonym: str # english synonym for the field name
     use_synonym: bool = False # whether to use the synonym in the Instructions (english statement)
 
+    @property
+    def name_str(self) -> str:
+        """Return the synonym if `use_synonym` is True, otherwise return the name."""
+        return self.synonym if self.use_synonym else self.name
+    
 @dataclass
 class TableName:
     """Represents a table and a synonym"""
@@ -17,6 +22,10 @@ class TableName:
     synonym: str # english synonym for the table name
     use_synonym: bool = False # whether to use the synonym in the Instructions (english statement)
 
+    @property
+    def name_str(self) -> str:
+        """Return the synonym if `use_synonym` is True, otherwise return the name."""
+        return self.synonym if self.use_synonym else self.name
 
 @dataclass
 class SelectField:
@@ -25,6 +34,10 @@ class SelectField:
     synonym: str # english synonym for the field name
     use_synonym: bool = False # whether to use the synonym in the Instructions (english statement)
 
+    @property
+    def name_str(self) -> str:
+        """Return the synonym if `use_synonym` is True, otherwise return the name."""
+        return self.synonym if self.use_synonym else self.name
     @property
     def aggregate_of_field(self):
         if self.aggregate == "":
@@ -48,7 +61,6 @@ class OrderField:
     name: str
     asc: bool
 
-
 # Remove newlines, multiple spaces, leading/trailing spaces 
 def trim_newlines_and_multiple_spaces(statement: str) -> str:
     str_list = statement.replace('\n', ' ').replace('    ', ' ').replace('   ', ' ').replace('  ', ' ').strip().split()
@@ -59,11 +71,11 @@ class BatchItem:
     command_set: int
     table_name: TableName
     table_fields: List[TableField]
-    create_statement: str
+    create_statement: str # aka Context
     select: List[SelectField]
     order_by: List[OrderField]
-    english_prompt: str
-    sql_statement: str
+    english_prompt: str # aka Instruction
+    sql_statement: str # aka Response
 
     def print(self):
         print( "Command Set:", self.command_set )

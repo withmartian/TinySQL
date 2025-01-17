@@ -94,7 +94,7 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms=False) -> lis
             english_prompt=english_select_from_prompt,
             sql_statement=sql_select_statement, # ground truth
         )
-        
+
         batch.append(batch_item)
 
     return batch

@@ -7,7 +7,7 @@ from nnsight import LanguageModel
 
 # Load the tokenizer and trained model for model 1, 2, or 3 and command set 0 (base model), 1, 2, or 3
 # If you are changing the models, consider updating the HF collection withmartian/tinysql as well. 
-def sql_interp_model_location( model_num : int, cs_num : int):
+def sql_interp_model_location( model_num : int, cs_num : int, synonym : bool = True):
 
     if model_num == 0:
         # Used with nnsight tutorials only
@@ -17,15 +17,27 @@ def sql_interp_model_location( model_num : int, cs_num : int):
         if cs_num == 0:
             return "roneneldan/TinyStories-Instruct-2Layers-33M"
 
-        elif cs_num == 1:
-            return "withmartian/sql_interp_bm1_cs1_experiment_1.10"
- 
-        elif cs_num == 2:
-            return "withmartian/sql_interp_bm1_cs2_experiment_2.10"
+        elif synonym:
+            # Semantic models
+            if cs_num == 1:
+                return "withmartian/sql_interp_bm1_cs1_experiment_1.10"
+    
+            elif cs_num == 2:
+                return "withmartian/sql_interp_bm1_cs2_experiment_2.10"
 
-        elif cs_num == 3:
-            return "withmartian/sql_interp_bm1_cs3_experiment_3.10"
-        
+            elif cs_num == 3:
+                return "withmartian/sql_interp_bm1_cs3_experiment_3.10"
+        else:
+            # Non-semantic models
+            if cs_num == 1:
+                return "withmartian/sql_interp_bm1_cs1_experiment_1.8"
+    
+            elif cs_num == 2:
+                return "withmartian/sql_interp_bm1_cs2_experiment_2.8"
+
+            elif cs_num == 3:
+                return "withmartian/sql_interp_bm1_cs3_experiment_3.8"        
+
     elif model_num == 2:
         if cs_num == 0:
             return "Qwen/Qwen2.5-0.5B-Instruct"
@@ -89,8 +101,8 @@ def load_model(model_location, auth_token=None, use_flash_attention=True, device
     return tokenizer, auto_model
 
 
-def load_sql_interp_model( model_num : int, cs_num : int, auth_token=None, use_flash_attention=True, device_map="auto"):
-    model_location = sql_interp_model_location(model_num, cs_num)
+def load_sql_interp_model( model_num : int, cs_num : int, synonym : bool = True,  auth_token=None, use_flash_attention=True, device_map="auto"):
+    model_location = sql_interp_model_location(model_num, cs_num, synonym)
 
     tokenizer, auto_model = load_model(model_location, auth_token=auth_token, use_flash_attention=use_flash_attention, device_map=device_map)
 
@@ -107,14 +119,14 @@ def load_sql_interp_model( model_num : int, cs_num : int, auth_token=None, use_f
     return tokenizer, auto_model
 
 
-def load_tinysql_model( model_num : int, cs_num : int, auth_token=None):
+def load_tinysql_model( model_num : int, cs_num : int, synonym : bool = True, auth_token=None):
 
     if model_num == 1:
-        the_tokenizer, auto_model = load_sql_interp_model(model_num, cs_num, auth_token=auth_token, use_flash_attention=False)
+        the_tokenizer, auto_model = load_sql_interp_model(model_num, cs_num, synonym=synonym, auth_token=auth_token, use_flash_attention=False)
         language_model = LanguageModel(auto_model, the_tokenizer)
         language_model.tokenizer = the_tokenizer
     else:
-        language_model = LanguageModel(sql_interp_model_location(model_num, cs_num), device_map="auto")
+        language_model = LanguageModel(sql_interp_model_location(model_num, cs_num, synonym=synonym), device_map="auto")
 
     return language_model
 
