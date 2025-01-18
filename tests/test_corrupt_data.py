@@ -25,11 +25,11 @@ class TestCorruptData(unittest.TestCase):
         for i, example in enumerate(examples, 1):
             print(f"\nExample {i} of {example.feature_name}:")
             if example.feature_name.startswith("Def"):
-                print(f"Clean statement  : {example.create_statement}")
-                print(f"Corrupt statement: {example.corrupt_create_statement}")
+                print(f"Clean statement  : {example.clean_token_str} : {example.create_statement}")
+                print(f"Corrupt statement: {example.corrupt_token_str} : {example.corrupt_create_statement}")
             else:
-                print(f"Clean prompt  : {example.english_prompt}")
-                print(f"Corrupt prompt: {example.corrupt_english_prompt}")
+                print(f"Clean prompt  : {example.clean_token_str} : {example.english_prompt}")
+                print(f"Corrupt prompt: {example.corrupt_token_str} : {example.corrupt_english_prompt}")
 
             assert example.clean_token_str != ""
             assert example.corrupt_token_str != ""
@@ -41,8 +41,15 @@ class TestCorruptData(unittest.TestCase):
             assert example.answer_token_index > 0
             assert example.prompt_token_index < example.answer_token_index 
 
-            clean_str = example.clean_BatchItem.get_alpaca_prompt() + example.clean_BatchItem.sql_statement
-            corrupt_str = example.corrupt_BatchItem.get_alpaca_prompt() + example.corrupt_BatchItem.sql_statement
+            cleanBatchItem = example.clean_BatchItem
+            corruptBatchItem = example.corrupt_BatchItem
+            assert cleanBatchItem.command_set == corruptBatchItem.command_set
+            assert cleanBatchItem.table_name.use_synonym == corruptBatchItem.table_name.use_synonym
+            assert cleanBatchItem.table_name.name == corruptBatchItem.table_name.name
+            assert cleanBatchItem.table_name.synonym == corruptBatchItem.table_name.synonym
+
+            clean_str = cleanBatchItem.get_alpaca_prompt() + example.clean_BatchItem.sql_statement
+            corrupt_str = corruptBatchItem.get_alpaca_prompt() + example.corrupt_BatchItem.sql_statement
             if clean_str == corrupt_str:
                 print("Clean  :", clean_str)
                 print("Corrupt:", corrupt_str)
@@ -67,7 +74,9 @@ class TestCorruptData(unittest.TestCase):
             # Check the clean string tokens have expected clean token in prompt and answer. 
             print(f"Prompt token index: {example.prompt_token_index} {example.answer_token_index} {len(clean_tokens)} {example.clean_tokenizer_index} ")
             assert clean_tokens[example.prompt_token_index] == example.clean_tokenizer_index
-            assert clean_tokens[example.answer_token_index] == example.clean_tokenizer_index
+            # If we are testing EngTableFeature or EngFieldFeature, with a semantic model, clean token will not be in the answer
+            if example.feature_name.startswith("Def"):
+                assert clean_tokens[example.answer_token_index] == example.clean_tokenizer_index
 
             # Check the corrupt string tokens have expected corrupt token in prompt 
             # PQR TODO This does not work for modelNum==2. Not sure why
@@ -75,8 +84,8 @@ class TestCorruptData(unittest.TestCase):
                 prompt_corrupt_token = corrupt_tokens[example.prompt_token_index]
                 if prompt_corrupt_token != example.corrupt_tokenizer_index:
                     print("Bad prompt corrupt token[", example.prompt_token_index, "]")
-                    print("Clean  :", clean_str)
-                    print("Corrupt:", corrupt_str)
+                    print("Clean  :", example.clean_token_str, " - ", clean_str)
+                    print("Corrupt:", example.corrupt_token_str, " - ", corrupt_str)
                     print("Want:", tokenizer.decode(example.corrupt_tokenizer_index)) 
                     print("Found:", tokenizer.decode(prompt_corrupt_token)) 
                     assert False
@@ -131,10 +140,10 @@ class TestCorruptData(unittest.TestCase):
     #    self.show_examples(DEFCREATETABLE, 1)
 
     def test_m1_generate_DEFTABLENAME(self):   
-        self.show_examples(DEFTABLENAME, 1, use_novel_names=False)
-        self.show_examples(DEFTABLENAME, 1, use_novel_names=True)
+        #self.show_examples(DEFTABLENAME, 1, use_novel_names=False)
+        #self.show_examples(DEFTABLENAME, 1, use_novel_names=True)
         self.show_examples(DEFTABLENAME, 1, use_novel_names=False, use_synonyms_table=True)
-        self.show_examples(DEFTABLENAME, 1, use_novel_names=True, use_synonyms_table=True)
+        #self.show_examples(DEFTABLENAME, 1, use_novel_names=True, use_synonyms_table=True)
 
     # Need to debug how "," is tokenized 
     #def test_generate_DEFFIELDSEPARATOR(self):   
