@@ -54,7 +54,7 @@ def dict_to_batchitem(row):
     # Create a new BatchItem instance
     batch_item = BatchItem(
         command_set=row['command_set'],
-        table_name=TableName(name=row['table_name'], synonym=row['table_name_synonym'], use_synonym=row['table_name_use_synonym']), 
+        table_name=TableName(name=row['table_name'], synonym=row.get('table_name_synonym'), use_synonym=row.get('table_name_use_synonym', False)),
         table_fields=table_fields,
         create_statement=row['create_statement'],
         select=select_fields,
