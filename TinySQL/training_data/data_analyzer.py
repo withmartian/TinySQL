@@ -110,7 +110,7 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
             # Evaluate the predicted SQL
             prediction_score = eval_function(item, generated_sql)
 
-            expected_sql = item['sql_statement']
+            expected_sql = sample['sql_statement']
 
             # Update counters and sums
             if prediction_score == 1.00:
