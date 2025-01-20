@@ -33,7 +33,7 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
 
     print(f"Loading dataset {dataset_name}")
 
-    dataset = load_dataset(dataset_name)[dataset_type].select(range(100))
+    dataset = load_dataset(dataset_name)[dataset_type]
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16).cuda()
