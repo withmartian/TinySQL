@@ -121,7 +121,7 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
     }
 
     hf_data = DatasetDict({
-        split_name: Dataset.from_dict(split_data)
+        split_name: Dataset.from_list(split_data)
         for split_name, split_data in data.items()
     })
 
