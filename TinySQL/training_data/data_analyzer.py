@@ -116,10 +116,11 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
             expected_sql = sample['sql_statement']
             english = sample['english_prompt']
             context = sample['create_statement']
+            full_output = sample['full_output']
 
             local_dict = {
                 'generated': generated_sql, 'expected': expected_sql,
-                'context': context, 'english': english
+                'context': context, 'english': english, 'full_output': full_output
             }
 
             # Update counters and sums
