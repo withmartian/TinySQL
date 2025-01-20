@@ -9,7 +9,7 @@ from TinySQL.training_data.generate_cs2 import evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import evaluate_cs3_prediction
 
 
-def get_errors(args, cs_num=3, model_num=1, syn=False, batch_size=8):
+def get_errors(max_seq_length=256, cs_num=3, model_num=1, syn=False, batch_size=8):
 
     model_name = sql_interp_model_location(model_num=model_num, cs_num=cs_num, synonym=syn)
     dataset_name = f"withmartian/cs{cs_num}_dataset_synonyms" if syn else f"withmartian/cs{cs_num}_dataset"
@@ -68,7 +68,7 @@ def get_errors(args, cs_num=3, model_num=1, syn=False, batch_size=8):
             return_tensors='pt',
             padding=True,
             truncation=True,
-            max_length=args.max_seq_length,
+            max_length=max_seq_length,
         )
 
         # Move input_ids and attention_mask to the model's device
