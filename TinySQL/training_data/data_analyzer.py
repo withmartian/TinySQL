@@ -64,6 +64,9 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
             for sample in batch_samples
         ]
 
+        for sample in batch_samples:
+            sample["full_output"] = alpaca_prompt.format(sample["english_prompt"], sample["create_statement"]) + " " + sample["sql_statement"]
+
         # Tokenize the prompts, use padding and truncation to handle variable-length inputs
         encoding = tokenizer(
             prompts,
