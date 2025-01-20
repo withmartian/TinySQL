@@ -111,12 +111,19 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
             prediction_score = eval_function(item, generated_sql)
 
             expected_sql = sample['sql_statement']
+            english = sample['english_prompt']
+            context = sample['create_statement']
+
+            local_dict = {
+                'generated': generated_sql, 'expected': expected_sql,
+                'context': context, 'english': english
+            }
 
             # Update counters and sums
             if prediction_score == 1.00:
-                correct_predictions.append({"generated": generated_sql, "expected": expected_sql})
+                correct_predictions.append(local_dict)
             else:
-                errors.append({"generated": generated_sql, "expected": expected_sql})
+                errors.append(local_dict)
 
     data = {
         "errors": errors, "correct_predictions": correct_predictions
