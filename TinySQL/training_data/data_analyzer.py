@@ -36,7 +36,7 @@ def get_errors(max_seq_length=256, cs_num=3, model_num=1, syn=True, batch_size=8
     dataset = load_dataset(dataset_name)[dataset_type]
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, dype=torch.float16).cuda()
+    model = AutoModelForCausalLM.from_pretrained(model_name, dtype=torch.float16).cuda()
 
     # Set the padding side
     tokenizer.padding_side = "left"
