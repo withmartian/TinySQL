@@ -102,19 +102,21 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
             generated_tokens = generated_id[input_length:]
 
             # Decode the generated tokens to get the predicted SQL
-            predicted_sql = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+            generated_sql = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
 
             # Prepare the item for evaluation
             item = dict_to_batchitem(sample)
 
             # Evaluate the predicted SQL
-            prediction_score = eval_function(item, predicted_sql)
+            prediction_score = eval_function(item, generated_sql)
+
+            expected_sql = item['sql_statement']
 
             # Update counters and sums
             if prediction_score == 1.00:
-                correct_predictions.append({"predicted": predicted_sql, "generated": item})
+                correct_predictions.append({"generated": generated_sql, "expected": expected_sql})
             else:
-                errors.append({"predicted": predicted_sql, "generated": item})
+                errors.append({"generated": generated_sql, "expected": expected_sql})
 
     data = {
         "errors": errors, "correct_predictions": correct_predictions
