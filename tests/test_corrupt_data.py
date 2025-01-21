@@ -7,8 +7,7 @@ class TestCorruptData(unittest.TestCase):
 
     def show_examples(self, feature_name, model_num, cs_num=1, use_novel_names=False, use_synonyms_field=False, use_synonyms_table=False):
         tokenizer, _ = load_sql_interp_model(model_num, cs_num, use_flash_attention=False, device_map=TEST_DEVICE_MAP)
-         
-        print( "show_examples(): use_novel_names:", use_novel_names, "use_synonyms_field:", use_synonyms_field, "use_synonyms_table:", use_synonyms_table)         
+                 
         generator = CorruptFeatureTestGenerator(
             model_num=model_num, 
             cs_num=cs_num, 
@@ -23,7 +22,9 @@ class TestCorruptData(unittest.TestCase):
         len_all_tokens = len(tokenizer(examples[0].clean_BatchItem.get_alpaca_prompt() + examples[0].clean_BatchItem.sql_statement)["input_ids"])
 
         for i, example in enumerate(examples, 1):
-            print(f"\nExample {i} of {example.feature_name}:")
+            print(f"\nExample {i} of {example.feature_name}: cs_num={cs_num} use_novel_names={use_novel_names} use_synonyms_field={use_synonyms_field} use_synonyms_table={use_synonyms_table} ")
+            print(f"cleantablenames=({example.clean_BatchItem.table_name.name},{example.clean_BatchItem.table_name.synonym})")
+
             if example.feature_name.startswith("Def"):
                 print(f"Clean statement  : {example.clean_token_str} : {example.create_statement}")
                 print(f"Corrupt statement: {example.corrupt_token_str} : {example.corrupt_create_statement}")
@@ -136,13 +137,14 @@ class TestCorruptData(unittest.TestCase):
         self.show_examples(ENGFIELDNAME, 1, use_novel_names=True, use_synonyms_field=True)
 
     # Suppress until CREATE is in the TinyStories Vocab     
-    #def test_generate_DEFCREATETABLE(self):    
+    #def test_m1_generate_DEFCREATETABLE(self):    
     #    self.show_examples(DEFCREATETABLE, 1)
 
     def test_m1_generate_DEFTABLENAME(self):   
-        #self.show_examples(DEFTABLENAME, 1, use_novel_names=False)
-        #self.show_examples(DEFTABLENAME, 1, use_novel_names=True)
-        self.show_examples(DEFTABLENAME, 1, use_novel_names=False, use_synonyms_table=True)
+        self.show_examples(DEFTABLENAME, 1, use_novel_names=False)
+        self.show_examples(DEFTABLENAME, 1, use_novel_names=True)
+        # We are changing the table name in the Instructions so we do not vary the table name in the Context using synonyms.  
+        #self.show_examples(DEFTABLENAME, 1, use_novel_names=False, use_synonyms_table=True)
         #self.show_examples(DEFTABLENAME, 1, use_novel_names=True, use_synonyms_table=True)
 
     # Need to debug how "," is tokenized 
