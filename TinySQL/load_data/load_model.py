@@ -3,72 +3,79 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from nnsight import LanguageModel
-
+from TinySQL.load_data.load_constants import BM_TUTORIAL, BM_TINY_STORIES, BM_QWEN, BM_LLAMA, BM_GRANITE, BM_SMOL, BM1_CS1_SEMANTIC, BM1_CS2_SEMANTIC, BM1_CS3_SEMANTIC, BM1_CS1_NONSEMANTIC, BM1_CS2_NONSEMANTIC, BM1_CS3_NONSEMANTIC, BM2_CS1_NONSEMANTIC, BM2_CS2_NONSEMANTIC, BM2_CS3_NONSEMANTIC, BM3_CS1_NONSEMANTIC, BM3_CS2_NONSEMANTIC, BM3_CS3_NONSEMANTIC    
 
 # Load the tokenizer and trained model for model 1, 2, or 3 and command set 0 (base model), 1, 2, or 3
 # If you are changing the models, consider updating the HF collection withmartian/tinysql as well. 
-def sql_interp_model_location( model_num : int, cs_num : int, synonym : bool = True):
-
+def sql_interp_model_location(model_num: int, cs_num: int, synonym: bool = True) -> str:
+    """
+    Get the model location based on model number, command set number, and synonym flag.
+    
+    Args:
+        model_num: Model number (0-5)
+        cs_num: Command set number (0-3)
+        synonym: Whether to use semantic (True) or non-semantic (False) variants 
+    
+    Returns:
+        str: Model location path
+    
+    Raises:
+        ValueError: If invalid model_num or cs_num is provided
+    """
+    # Tutorial model
     if model_num == 0:
-        # Used with nnsight tutorials only
-        return "openai-community/gpt2" # Base model
-
-    elif model_num == 1:
-        if cs_num == 0:
-            return "roneneldan/TinyStories-Instruct-2Layers-33M"
-
-        elif synonym:
-            # Semantic models
+        return BM_TUTORIAL
+        
+    # Base models (cs_num == 0)
+    if cs_num == 0:
+        if model_num == 1:
+            return BM_TINY_STORIES
+        elif model_num == 2:
+            return BM_QWEN
+        elif model_num == 3:
+            return BM_LLAMA
+        elif model_num == 4:
+            return BM_GRANITE
+        elif model_num == 5:
+            return BM_SMOL
+            
+    # Model 1 variants
+    if model_num == 1:
+        if synonym:  # Semantic variants
             if cs_num == 1:
-                return "withmartian/sql_interp_bm1_cs1_experiment_1.10"
-    
+                return BM1_CS1_SEMANTIC
             elif cs_num == 2:
-                return "withmartian/sql_interp_bm1_cs2_experiment_2.10"
-
+                return BM1_CS2_SEMANTIC
             elif cs_num == 3:
-                return "withmartian/sql_interp_bm1_cs3_experiment_3.10"
-        else:
-            # Non-semantic models
+                return BM1_CS3_SEMANTIC
+        else:  # Non-semantic variants
             if cs_num == 1:
-                return "withmartian/sql_interp_bm1_cs1_experiment_1.8"
-    
+                return BM1_CS1_NONSEMANTIC
             elif cs_num == 2:
-                return "withmartian/sql_interp_bm1_cs2_experiment_2.8"
-
+                return BM1_CS2_NONSEMANTIC
             elif cs_num == 3:
-                return "withmartian/sql_interp_bm1_cs3_experiment_3.8"        
-
+                return BM1_CS3_NONSEMANTIC
+                
+    # Model 2 variants (all non-semantic)
     elif model_num == 2:
-        if cs_num == 0:
-            return "Qwen/Qwen2.5-0.5B-Instruct"
-
-        elif cs_num == 1:
-            return "withmartian/sql_interp_bm2_cs1_experiment_4.2"
- 
+        if cs_num == 1:
+            return BM2_CS1_NONSEMANTIC
         elif cs_num == 2:
-            return "withmartian/sql_interp_bm2_cs2_experiment_5.2"
-
+            return BM2_CS2_NONSEMANTIC
         elif cs_num == 3:
-            return "withmartian/sql_interp_bm2_cs3_experiment_6.2"
-        
+            return BM2_CS3_NONSEMANTIC
+            
+    # Model 3 variants (all non-semantic)
     elif model_num == 3:
-        if cs_num == 0:
-            return "withmartian/Llama-3.2-1B-Instruct"
-
-        elif cs_num == 1:
-            return "withmartian/sql_interp_bm3_cs1_experiment_7.2"
- 
+        if cs_num == 1:
+            return BM3_CS1_NONSEMANTIC
         elif cs_num == 2:
-            return "withmartian/sql_interp_bm3_cs2_experiment_8.2"
-
+            return BM3_CS2_NONSEMANTIC
         elif cs_num == 3:
-            return "withmartian/sql_interp_bm3_cs3_experiment_9.2"
-        
-    elif model_num == 4: # draft
-        return "ibm-granite/granite-3.0-1b-a400m-instruct" # Base "mid-size" model
-    
-    elif model_num == 5: # draft
-        return "HuggingFaceTB/SmolLM-360M-Instruct" # Base "mid-size" model    
+            return BM3_CS3_NONSEMANTIC
+            
+    raise ValueError(f"Invalid combination: model_num={model_num}, cs_num={cs_num}")
+ 
 
 
 # Load the tokenizer and model. Uses HF_TOKEN for private models 
@@ -101,8 +108,7 @@ def load_model(model_location, auth_token=None, use_flash_attention=True, device
     return tokenizer, auto_model
 
 
-def load_sql_interp_model( model_num : int, cs_num : int, synonym : bool = True,  auth_token=None, use_flash_attention=True, device_map="auto"):
-    model_location = sql_interp_model_location(model_num, cs_num, synonym)
+def load_sql_interp_model_location(model_num : int, model_location : str, auth_token=None, use_flash_attention=True, device_map="auto"):
 
     tokenizer, auto_model = load_model(model_location, auth_token=auth_token, use_flash_attention=use_flash_attention, device_map=device_map)
 
@@ -119,19 +125,31 @@ def load_sql_interp_model( model_num : int, cs_num : int, synonym : bool = True,
     return tokenizer, auto_model
 
 
-def load_tinysql_model( model_num : int, cs_num : int, synonym : bool = True, auth_token=None):
+def load_sql_interp_model(model_num : int, cs_num : int, synonym : bool = True, auth_token=None, use_flash_attention=True, device_map="auto"):
+    model_location = sql_interp_model_location(model_num, cs_num, synonym)
 
+    return load_sql_interp_model_location(model_num, model_location, auth_token=auth_token, use_flash_attention=use_flash_attention, device_map=device_map)
+
+
+def load_tinysql_model_location(model_num : int, model_location : str, auth_token=None):
     if model_num == 1:
-        the_tokenizer, auto_model = load_sql_interp_model(model_num, cs_num, synonym=synonym, auth_token=auth_token, use_flash_attention=False)
+        the_tokenizer, auto_model = load_sql_interp_model_location(model_num, model_location, auth_token=auth_token)
         language_model = LanguageModel(auto_model, the_tokenizer)
         language_model.tokenizer = the_tokenizer
     else:
-        language_model = LanguageModel(sql_interp_model_location(model_num, cs_num, synonym=synonym), device_map="auto")
+        language_model = LanguageModel(model_location, device_map="auto")
 
     return language_model
 
 
-# Free up memory. Deletes objects that only have "weak references" to them.
+def load_tinysql_model(model_num : int, cs_num : int, synonym : bool = True, auth_token=None):
+    model_location = sql_interp_model_location(model_num, cs_num, synonym)
+
+    return load_tinysql_model_location(model_num, model_location, auth_token=auth_token)
+
+
+# Free up memory. 
+# Deletes objects that only have 'weak references' to them. Refer comments on replace_weak_references below.
 def free_memory():
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -142,7 +160,8 @@ def free_memory():
 
 
 # A list may contain 'weak references' to objects that are garbage collected by free_memory.
-# This function replaces weak with strong references. Call it before free_memory. 
+# This function replaces weak with strong references.
+# If you get 'reference to deleted objects' when using nnsight, call this before calling free_memory. 
 def replace_weak_references(obj):
     if isinstance(obj, list):
         return [replace_weak_references(item) for item in obj]
@@ -158,16 +177,11 @@ def replace_weak_references(obj):
         return obj
     
 
+# Return key size information about the models. Only handles models 1 to 3 for now.
 def get_model_sizes( model_num, model, show = True ):
-    # Old code
-    # n_heads = 16 if model_num == 1 else 7 if model_num == 2 else 16
-    # n_dim = 64 if model_num == 1 else 128 if model_num == 2 else 128  
         
-    if model_num == 1:
-        N_LAYERS = len(model.transformer.h)
-    else:
-        N_LAYERS = len(model.model.layers)
-    N_HEADS = 16 if model_num == 1 else 7 if model_num == 2 else 16
+    N_LAYERS = len(model.transformer.h) if model_num == 1 else model.model.layers
+    N_HEADS = model.config.num_attention_heads
 
     D_MODEL = model.transformer.wte.embedding_dim if model_num == 1 else model.config.hidden_size
     D_HEAD = D_MODEL // N_HEADS  

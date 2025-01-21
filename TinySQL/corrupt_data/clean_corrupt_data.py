@@ -99,16 +99,21 @@ class CorruptFeatureTestGenerator:
         self.num_fields = num_fields
         
         # Original sample data
-        self.clean_table_names = ["people", "inventory", "orders", "products", 
-                                        # "flights", not 1 token 
-                                        #"favorites", 
-                                        #"schedule", 
-                                        "items", "users",
-                                        "links", 
-                                        #"messages", 
-                                        #"countries", 
-                                        #"campaigns"
-                                        ]
+        self.clean_table_names = [
+            "people", 
+            "inventory", 
+            "orders", 
+            "products", 
+            # "flights", not 1 token 
+            # "favorites", 
+            # "schedule", 
+            "items", 
+            "users",
+            "links", 
+            # "messages", 
+            # "countries", 
+            # "campaigns"
+            ]
         
         self.synonym_table_names = {
             "people": "children", 
@@ -173,7 +178,7 @@ class CorruptFeatureTestGenerator:
         crt_fields = ', '.join([f for f in fields])
         types = [random.choice(self.clean_field_types) for _ in fields]
         
-        selected_fields = [TableField(f, t, self.synonym_field_names[f]) for f, t in zip(fields, types)]
+        selected_fields = [TableField(f, t, self.synonym_field_names[f], use_synonym=self.use_synonyms_field) for f, t in zip(fields, types)]
         
         order_by_clause = ""
         order_by_english = ""
@@ -242,10 +247,6 @@ class CorruptFeatureTestGenerator:
 
         if self.tokenizer is not None:      
             item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
-            #if self.use_synonyms_table and item.clean_token_str in self.clean_table_names:
-            #    syn_index =  self.tokenize_text(self.synonym_table_names[item.clean_token_str])
-            #if self.use_synonyms_field and item.clean_token_str in self.clean_field_names:
-            #    syn_index =  self.tokenize_text(self.synonym_field_names[item.clean_token_str])
             item.corrupt_tokenizer_index = self.tokenize_text(item.corrupt_token_str)
 
             # Check the tokens can be tokenized by the tokenizer
@@ -256,8 +257,7 @@ class CorruptFeatureTestGenerator:
                 clean_prompt_str = item.clean_BatchItem.get_alpaca_prompt()
                 clean_answer_str = item.clean_BatchItem.sql_statement           
                 clean_prompt_tokens = self.tokenizer(clean_prompt_str)["input_ids"]
-                clean_answer_tokens = self.tokenizer(clean_answer_str)["input_ids"]
-                    
+                clean_answer_tokens = self.tokenizer(clean_answer_str)["input_ids"]                
 
                 # Tokenize prompt and answer strings to find the index of the clean token in the tokenized strings.
                 if second_occurrence and not self.use_synonyms_field and not self.use_synonyms_table:
@@ -275,21 +275,7 @@ class CorruptFeatureTestGenerator:
                 else:
                     item.prompt_token_index = clean_prompt_tokens.index(item.clean_tokenizer_index)
 
-                # Token position in the predicted answer of the token that may be corrupted
-                #if self.use_synonyms_table and item.clean_token_str in list(self.synonym_table_names.keys()) + self.clean_table_names:
-                #    if item.clean_tokenizer_index in clean_answer_tokens:
-                #        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
-                #    else:
-                #        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
-               
-                #if self.use_synonyms_field and item.clean_token_str in list(self.synonym_field_names.keys()) + self.clean_field_names:
-                #    if item.clean_tokenizer_index in clean_answer_tokens:
-                #        item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(item.clean_tokenizer_index) - 1
-                #    else:
-                #       item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(syn_index) - 1
-                # PQR Doesnt following code override the above 10 lines of code?   
-
-                # If we are using a semantic model, and testing feature EngTableName or EngFieldName, then we clean token will not appear in the answer 
+                # If we are using a semantic model, and testing feature EngTableName or EngFieldName, then the clean token will not appear in the answer 
                 answer_tokenizer_index = self.tokenize_text(answer_token)
                 item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(answer_tokenizer_index) - 1
 
