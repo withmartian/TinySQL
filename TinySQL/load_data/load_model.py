@@ -131,13 +131,13 @@ def load_sql_interp_model(model_num : int, cs_num : int, synonym : bool = True, 
     return load_sql_interp_model_location(model_num, model_location, auth_token=auth_token, use_flash_attention=use_flash_attention, device_map=device_map)
 
 
-def load_tinysql_model_location(model_num : int, model_location : str, auth_token=None):
+def load_tinysql_model_location(model_num : int, model_location : str, auth_token=None, device_map="auto"):
     if model_num == 1:
-        the_tokenizer, auto_model = load_sql_interp_model_location(model_num, model_location, auth_token=auth_token)
+        the_tokenizer, auto_model = load_sql_interp_model_location(model_num, model_location, auth_token=auth_token, use_flash_attention=False, device_map=device_map)
         language_model = LanguageModel(auto_model, the_tokenizer)
         language_model.tokenizer = the_tokenizer
     else:
-        language_model = LanguageModel(model_location, device_map="auto")
+        language_model = LanguageModel(model_location, device_map=device_map)
 
     return language_model
 
