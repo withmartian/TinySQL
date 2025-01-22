@@ -180,7 +180,7 @@ def replace_weak_references(obj):
 # Return key size information about the models. Only handles models 1 to 3 for now.
 def get_model_sizes( model_num, model, show = True ):
         
-    N_LAYERS = len(model.transformer.h) if model_num == 1 else model.model.layers
+    N_LAYERS = len(model.transformer.h) if model_num == 1 else len(model.model.layers)
     N_HEADS = model.config.num_attention_heads
 
     D_MODEL = model.transformer.wte.embedding_dim if model_num == 1 else model.config.hidden_size
