@@ -10,9 +10,37 @@ from TinySQL.training_data.generate_cs1 import evaluate_cs1_prediction
 from TinySQL.training_data.generate_cs2 import evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import evaluate_cs3_prediction
 
+import diskcache as dc
+import time
 
+# Initialize a disk cache
+cache = dc.Cache('./cache_dir')
+
+
+# Decorator for disk caching
+def disk_cache_decorator(cache):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            # Create a unique key based on the function name, args, and kwargs
+            key = (func.__name__, args, frozenset(kwargs.items()))
+
+            # Check if the key exists in the cache
+            if key in cache:
+                print("Returning cached result")
+                return cache[key]
+
+            # If not cached, execute the function and store the result
+            result = func(*args, **kwargs)
+            cache[key] = result
+            print("Result cached")
+            return result
+
+        return wrapper
+
+    return decorator
+
+@disk_cache_decorator
 def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=32, fast=False):
-
     model_name = sql_interp_model_location(model_num=model_num, cs_num=cs_num, synonym=syn)
     dataset_name = f"withmartian/cs{cs_num}_dataset_synonyms" if syn else f"withmartian/cs{cs_num}_dataset"
 
