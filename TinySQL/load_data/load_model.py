@@ -189,4 +189,8 @@ def get_model_sizes( model_num, model, show = True ):
     if show:
         print("N_LAYERS="+str(N_LAYERS), "N_HEADS="+str(N_HEADS), "D_MODEL="+str(D_MODEL), "D_HEAD="+str(D_HEAD))
 
+    assert N_LAYERS > 0 and N_HEADS > 0, "Model architecture parameters must be positive"
+    assert D_MODEL > 0 and D_HEAD > 0, "Model dimensions must be positive"
+    assert D_MODEL == N_HEADS * D_HEAD, f"D_MODEL ({D_MODEL}) must equal N_HEADS * D_HEAD ({N_HEADS} * {D_HEAD} = {N_HEADS * D_HEAD})"
+
     return N_LAYERS, N_HEADS, D_MODEL, D_HEAD
