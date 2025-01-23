@@ -3,29 +3,30 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-def train_linear_probe(dataset, representation_column="representation", label_column="label", top_k=5):
+
+def train_linear_probe(data, representation_column="representation", label_column="label", top_k=5):
     """
-    Train a linear probe on a dataset with specified 'label' and 'representation' columns, 
+    Train a linear probe on a list of dictionaries with specified 'label' and 'representation' keys,
     return accuracy, and the top k most important features.
 
     Args:
-        dataset: Hugging Face dataset.
-        representation_column (str): Name of the column containing feature dictionaries.
-        label_column (str): Name of the column containing labels.
+        data (list): List of dictionaries with 'representation' and 'label' keys.
+        representation_column (str): Key for the representation feature dictionary.
+        label_column (str): Key for the label.
         top_k (int): Number of top features to return based on importance.
 
     Returns:
-        accuracy: Accuracy of the linear probe on the test set.
-        top_features: List of the top k most important features and their coefficients.
+        accuracy (float): Accuracy of the linear probe on the test set.
+        top_features (list): List of the top k most important features and their coefficients.
     """
     # Extract features and labels
-    features_list = [list(rep.keys()) for rep in dataset[representation_column]]
+    features_list = [list(item[representation_column].keys()) for item in data]
     if len(set(map(tuple, features_list))) > 1:
         raise ValueError("All dictionaries in the representation column must have the same keys.")
 
     feature_names = features_list[0]
-    X = np.array([list(rep.values()) for rep in dataset[representation_column]])
-    y = np.array(dataset[label_column])
+    X = np.array([list(item[representation_column].values()) for item in data])
+    y = np.array([item[label_column] for item in data])
 
     # Split into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
