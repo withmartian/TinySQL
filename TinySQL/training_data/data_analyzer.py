@@ -11,7 +11,7 @@ from TinySQL.training_data.generate_cs2 import evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import evaluate_cs3_prediction
 
 
-def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=32):
+def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=32, fast=False):
 
     model_name = sql_interp_model_location(model_num=model_num, cs_num=cs_num, synonym=syn)
     dataset_name = f"withmartian/cs{cs_num}_dataset_synonyms" if syn else f"withmartian/cs{cs_num}_dataset"
@@ -35,8 +35,11 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
 
     dataset = load_dataset(dataset_name)[dataset_type]
 
+    if fast:
+        dataset = dataset.select(range(100))
+
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16).cuda()
+    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).cuda()
 
     # Set the padding side
     tokenizer.padding_side = "left"
