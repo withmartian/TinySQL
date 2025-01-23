@@ -47,9 +47,6 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
     alpaca_prompt = """### Instruction: {} ### Context: {} ### Response: """
     dataset_type = "validation"
 
-    correct_predictions = []
-    errors = []
-
     match str(cs_num):
         case "1":
             eval_function = evaluate_cs1_prediction
