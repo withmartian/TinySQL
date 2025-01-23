@@ -19,13 +19,18 @@ def train_linear_probe(data, representation_column="representation", label_colum
         accuracy (float): Accuracy of the linear probe on the test set.
         top_features (list): List of the top k most important features and their coefficients.
     """
-    # Extract features and labels
-    features_list = [list(item[representation_column].keys()) for item in data]
-    if len(set(map(tuple, features_list))) > 1:
-        raise ValueError("All dictionaries in the representation column must have the same keys.")
 
-    feature_names = features_list[0]
-    X = np.array([list(item[representation_column].values()) for item in data])
+    # Get the union of all feature keys across all dictionaries
+    all_feature_keys = set()
+    for item in data:
+        all_feature_keys.update(item[representation_column].keys())
+    all_feature_keys = sorted(all_feature_keys)  # Keep a consistent order of keys
+
+    # Extract features and labels
+    X = np.array([
+        [item[representation_column].get(key, 0) for key in all_feature_keys]
+        for item in data
+    ])
     y = np.array([item[label_column] for item in data])
 
     # Split into train and test sets
@@ -49,6 +54,6 @@ def train_linear_probe(data, representation_column="representation", label_colum
 
     # Get the top k features
     top_indices = importance.argsort()[-top_k:][::-1]
-    top_features = [(feature_names[i], importance[i]) for i in top_indices]
+    top_features = [(all_feature_keys[i], importance[i]) for i in top_indices]
 
     return accuracy, top_features
