@@ -11,6 +11,16 @@ BM1_CS1_SEMANTIC = "withmartian/sql_interp_bm1_cs1_experiment_1.10"
 BM1_CS2_SEMANTIC = "withmartian/sql_interp_bm1_cs2_experiment_2.10"
 BM1_CS3_SEMANTIC = "withmartian/sql_interp_bm1_cs3_experiment_3.10"
 
+# Model 2 Semantic Variants
+BM2_CS1_SEMANTIC = "withmartian/sql_interp_bm2_cs1_experiment_4.3"
+BM2_CS2_SEMANTIC = "withmartian/sql_interp_bm2_cs2_experiment_5.3"
+BM2_CS3_SEMANTIC = "withmartian/sql_interp_bm2_cs3_experiment_6.3"
+
+# Model 3 Semantic Variants
+BM3_CS1_SEMANTIC = "withmartian/sql_interp_bm3_cs1_experiment_7.3"
+BM3_CS2_SEMANTIC = "withmartian/sql_interp_bm3_cs2_experiment_8.3"
+BM3_CS3_SEMANTIC = "withmartian/sql_interp_bm3_cs3_experiment_9.3"
+
 # Model 1 Non-semantic Variants
 BM1_CS1_NONSEMANTIC = "withmartian/sql_interp_bm1_cs1_experiment_1.8"
 BM1_CS2_NONSEMANTIC = "withmartian/sql_interp_bm1_cs2_experiment_2.8"
