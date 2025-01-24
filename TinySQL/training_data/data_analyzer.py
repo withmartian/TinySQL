@@ -10,17 +10,42 @@ from TinySQL.training_data.generate_cs1 import evaluate_cs1_prediction
 from TinySQL.training_data.generate_cs2 import evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import evaluate_cs3_prediction
 
+import diskcache as dc
+import time
 
-def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=32):
+# Initialize a disk cache
+cache = dc.Cache('./cache_dir')
 
+
+# Decorator for disk caching
+def disk_cache_decorator(cache):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            # Create a unique key based on the function name, args, and kwargs
+            key = (func.__name__, args, frozenset(kwargs.items()))
+
+            # Check if the key exists in the cache
+            if key in cache:
+                print("Returning cached result")
+                return cache[key]
+
+            # If not cached, execute the function and store the result
+            result = func(*args, **kwargs)
+            cache[key] = result
+            print("Result cached")
+            return result
+
+        return wrapper
+
+    return decorator
+
+@disk_cache_decorator(cache)
+def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=32, fast=False):
     model_name = sql_interp_model_location(model_num=model_num, cs_num=cs_num, synonym=syn)
     dataset_name = f"withmartian/cs{cs_num}_dataset_synonyms" if syn else f"withmartian/cs{cs_num}_dataset"
 
     alpaca_prompt = """### Instruction: {} ### Context: {} ### Response: """
     dataset_type = "validation"
-
-    correct_predictions = []
-    errors = []
 
     match str(cs_num):
         case "1":
@@ -35,8 +60,11 @@ def get_errors(max_seq_length=512, cs_num=3, model_num=1, syn=True, batch_size=3
 
     dataset = load_dataset(dataset_name)[dataset_type]
 
+    if fast:
+        dataset = dataset.select(range(100))
+
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16).cuda()
+    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16).cuda()
 
     # Set the padding side
     tokenizer.padding_side = "left"
