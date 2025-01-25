@@ -136,20 +136,12 @@ class TestCorruptData(unittest.TestCase):
         self.show_examples(ENGFIELDNAME, 1, use_novel_names=False, use_synonyms_field=True)
         self.show_examples(ENGFIELDNAME, 1, use_novel_names=True, use_synonyms_field=True)
 
-    # Suppress until CREATE is in the TinyStories Vocab     
-    #def test_m1_generate_DEFCREATETABLE(self):    
-    #    self.show_examples(DEFCREATETABLE, 1)
-
     def test_m1_generate_DEFTABLENAME(self):   
         self.show_examples(DEFTABLENAME, 1, use_novel_names=False)
         self.show_examples(DEFTABLENAME, 1, use_novel_names=True)
         # We are changing the table name in the Instructions so we do not vary the table name in the Context using synonyms.  
         #self.show_examples(DEFTABLENAME, 1, use_novel_names=False, use_synonyms_table=True)
         #self.show_examples(DEFTABLENAME, 1, use_novel_names=True, use_synonyms_table=True)
-
-    # Need to debug how "," is tokenized 
-    #def test_generate_DEFFIELDSEPARATOR(self):   
-    #    self.show_examples(DEFFIELDSEPARATOR, 1)
 
     def test_m1_generate_DEFFIELDNAME(self):  
         self.show_examples(DEFFIELDNAME, 1, use_novel_names=False)
@@ -163,3 +155,38 @@ class TestCorruptData(unittest.TestCase):
         self.show_examples(DEFFIELDNAME, 2, use_novel_names=False, use_synonyms_field=True)
         self.show_examples(DEFFIELDNAME, 2, use_novel_names=True, use_synonyms_field=True)
 
+    # Test that CorruptFeatureTestGenerator generates examples with the same number of tokens   
+    # under a range of different conditions. 
+    def test_m1_generate_same_length(self):   
+        tokenizer, _ = load_sql_interp_model(1, 2, use_flash_attention=False, device_map=TEST_DEVICE_MAP)
+
+        batch_size = 10
+
+        for use_novel_names in [True,False]:
+            for use_synonyms_field in [True,False]:
+                for use_synonyms_table in [True,False]:
+                    for feature_name in [ENGTABLENAME, ENGFIELDNAME, DEFTABLENAME, DEFFIELDNAME]:
+
+                        if feature_name == DEFTABLENAME and use_synonyms_table:
+                            continue
+
+                        generator = CorruptFeatureTestGenerator(
+                            model_num=1, 
+                            cs_num=2, 
+                            tokenizer=tokenizer, 
+                            use_novel_names=use_novel_names, 
+                            use_synonyms_field=use_synonyms_field,
+                            use_synonyms_table=use_synonyms_table)
+
+                        examples = generator.generate_feature_examples(feature_name, batch_size)      
+
+                        tokens = len(tokenizer(examples[0].clean_BatchItem.get_alpaca_prompt() + examples[0].clean_BatchItem.sql_statement)["input_ids"])
+                        print(f"{feature_name} use_novel_names={use_novel_names} use_synonyms_field={use_synonyms_field} use_synonyms_table={use_synonyms_table} tokens={tokens}")
+
+                        for i, example in enumerate(examples, 1):
+
+                            this_tokens = len(tokenizer(example.clean_BatchItem.get_alpaca_prompt() + example.clean_BatchItem.sql_statement)["input_ids"])
+                            assert this_tokens == tokens
+
+                            this_tokens = len(tokenizer(example.corrupt_BatchItem.get_alpaca_prompt() + example.corrupt_BatchItem.sql_statement)["input_ids"])
+                            assert this_tokens == tokens
