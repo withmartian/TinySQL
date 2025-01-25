@@ -13,6 +13,8 @@ DEFTABLENAME = "DefTableName"
 DEFFIELDNAME = "DefFieldName"
 DEFFIELDSEPARATOR = "DefFieldSeparator"
 
+# CorruptFeatureTestGenerator generates clean and corrupt data for testing.
+# That clean and corrupt examples have the same number of tokens under a range of different conditions.   
 @dataclass
 class CorruptibleBatchItem(BatchItem):
     feature_name: str = ""
@@ -87,8 +89,9 @@ class CorruptibleBatchItem(BatchItem):
      
 
 class CorruptFeatureTestGenerator:
-    def __init__(self, model_num: int = UNKNOWN_VALUE, cs_num: int = UNKNOWN_VALUE, 
-                 tokenizer = None, use_novel_names: bool = False, use_order_by: bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False, num_fields: int = 2):
+    def __init__(self, model_num: int = 1, cs_num: int = 1, tokenizer = None, 
+                 use_novel_names: bool = False, use_order_by: bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False, 
+                 num_fields: int = 2):
         self.model_num = model_num
         self.cs_num = cs_num
         self.tokenizer = tokenizer
