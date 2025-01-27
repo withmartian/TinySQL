@@ -4,7 +4,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-def train_linear_probe_sparse(data, representation_column="representation", label_column="label", top_k=5):
+def train_linear_probe_sparse(data, representation_column="averaged_representation", label_column="label", top_k=5):
     """
     Train a linear probe on a list of dictionaries with specified 'label' and 'representation' keys,
     return accuracy, and the top k most important features.
