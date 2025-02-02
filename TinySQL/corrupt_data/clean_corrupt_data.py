@@ -48,7 +48,12 @@ class CorruptibleBatchItem(BatchItem):
     use_novel_names: bool = False # Use words not seen in training for the corrupt token
 
     def corrupt_data_sanity_check(self):
-        pass
+        if self.feature_name.startswith("Def"):
+            assert self.corrupt_create_statement is not None 
+            assert self.corrupt_create_statement != self.create_statement
+        elif self.feature_name.startswith("Eng"):
+            assert self.corrupt_english_prompt is not None 
+            assert self.corrupt_english_prompt != self.english_prompt
 
     @property
     def clean_BatchItem(self) -> BatchItem:
