@@ -3,7 +3,16 @@ from typing import List, Optional
 import random
 from TinySQL.training_data.fragments.models import TableName, BatchItem, TableField, SelectField
 from TinySQL.training_data.sql_create_table import get_sql_create_table_from_selected_fields
+from TinySQL.training_data.sql_create_table import get_sql_create_table
+from TinySQL.training_data.sql_select_from import get_sql_select_from
+from TinySQL.training_data.sql_order_by import get_sql_order_by
+from TinySQL.training_data.fragments.field_names import get_FieldInfo
+from TinySQL.training_data.generate_cs1 import evaluate_cs1_prediction_score, get_english_select_from, get_english_order_by, trim_newlines_and_multiple_spaces, evaluate_unrecognised_words
+from TinySQL.training_data.fragments.english_order_by import get_english_order_by_phrase
+from TinySQL.training_data.fragments.english_aggregates import get_english_sum_phrases, get_english_avg_phrases, get_english_min_phrases, get_english_max_phrases, get_english_count_phrases
 
+
+field_info = get_FieldInfo()
 
 UNKNOWN_VALUE = -1
 ENGTABLENAME = "EngTableName"
@@ -12,6 +21,15 @@ DEFCREATETABLE = "DefCreateTable"
 DEFTABLENAME = "DefTableName"
 DEFFIELDNAME = "DefFieldName"
 DEFFIELDSEPARATOR = "DefFieldSeparator"
+
+DEFORDERBYFIELD1 = "DefOrderByField1"
+DEFORDERBYFIELD2 = "DefOrderByField2"
+DEFORDERBYDIRECTION1 = "DefOrderByDirection1"
+DEFORDERBYDIRECTION2 = "DefOrderByDirection2" 
+DEFAGGREGATEFUNCTION1 = "DefAggregateFunction1"
+DEFAGGREGATEFUNCTION2 = "DefAggregateFunction2"
+DEFAGGREGATEFIELD1 = "DefAggregateField1"
+DEFAGGREGATEFIELD2 = "DefAggregateField2"
 
 # CorruptFeatureTestGenerator generates clean and corrupt data for testing.
 # That clean and corrupt examples have the same number of tokens under a range of different conditions.   
@@ -41,6 +59,8 @@ class CorruptibleBatchItem(BatchItem):
             create_statement=self.create_statement,
             select=self.select,
             order_by=self.order_by,
+            order_by_phrase = self.order_by_phrase,
+            agg_phrases=self.agg_phrases,
             english_prompt=self.english_prompt,
             sql_statement=self.sql_statement
         )
@@ -56,6 +76,8 @@ class CorruptibleBatchItem(BatchItem):
             create_statement=self.corrupt_create_statement or self.create_statement,
             select=self.select,
             order_by=self.order_by,
+            order_by_phrase=self.order_by_phrase,
+            agg_phrases=self.agg_phrases,
             english_prompt=self.corrupt_english_prompt or self.english_prompt,
             sql_statement=self.corrupt_sql_statement or self.sql_statement
         )
@@ -85,13 +107,14 @@ class CorruptibleBatchItem(BatchItem):
 
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = 1, cs_num: int = 1, tokenizer = None, 
-                 use_novel_names: bool = False, use_order_by: bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False, 
+                 use_novel_names: bool = False, use_order_by: bool = False, use_aggregates:bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False, 
                  num_fields: int = 2):
         self.model_num = model_num
         self.cs_num = cs_num
         self.tokenizer = tokenizer
         self.use_novel_names = use_novel_names
         self.use_order_by = use_order_by
+        self.use_aggregates = use_aggregates
         self.use_synonyms_field = use_synonyms_field
         self.use_synonyms_table = use_synonyms_table
         self.num_fields = num_fields
@@ -188,21 +211,80 @@ class CorruptFeatureTestGenerator:
             order_by_clause = f" ORDER BY {order_by_field} {direction}"
             order_by_english = f" ordered by {self.synonym_field_names[order_by_field] if self.use_synonyms_field else order_by_field} in {'descending' if direction == 'DESC' else 'ascending'} order"
             order_by_fields = [SelectField(order_by_field, direction, order_by_field)]
-        
+            order_by_phrase = {'descending' if direction == 'DESC' else 'ascending'}
+
         english_prompt = f"show me the {eng_fields} from the {table_name.synonym if self.use_synonyms_table else table_name.name} table{order_by_english}"
         sql_statement = f"SELECT {crt_fields} FROM {table_name.name}{order_by_clause}"
-        
-        return BatchItem(
+
+        batch_item_to_return = BatchItem(
             command_set=2 if self.use_order_by else 1,
             table_name=TableName(name=table_name.name, synonym=table_name.synonym, use_synonym=table_name.use_synonym),
             table_fields=selected_fields,
             create_statement=get_sql_create_table_from_selected_fields(table_name, selected_fields)[2],
             select=[SelectField(f, "", self.synonym_field_names[f]) for f in fields],
             order_by=order_by_fields,
+            order_by_phrase = order_by_phrase,
+            agg_phrases=[],
             english_prompt=english_prompt,
             sql_statement=sql_statement
         )
 
+        # if self.use_aggregates:
+        #     print('TFF', type(selected_fields[0]))
+        #     (selected_fields, sql_select_statement) = get_sql_select_from(table_name, selected_fields, self.use_aggregates)
+        #     print('TFF', type(selected_fields[0]))
+        #     (english_select_from_prompt, table_name, selected_fields) = get_english_select_fro(table_name, selected_fields, self.use_synonyms_table, self.use_synonyms_field)
+        #     print('TFFFFFF', type(selected_fields[0]))
+        #     if self.use_order_by:
+        #         (order_by_fields, sql_order_by_statement) = get_sql_order_by(selected_fields)
+        #         english_order_by_prompt = get_english_order_by(order_by_fields)
+        #     else:
+        #         order_by_fields = []
+        #         english_order_by_prompt = ""
+        #         sql_order_by_statement = ""
+
+        #     batch_item_to_return = BatchItem(
+        #     command_set=2,
+        #     table_name=TableName(name=table_name.name, synonym=table_name.synonym, use_synonym=table_name.use_synonym), 
+        #     table_fields=selected_fields,
+        #     create_statement=get_sql_create_table_from_selected_fields(table_name, selected_fields)[2],
+        #     select=selected_fields,
+        #     order_by=order_by_fields,
+        #     english_prompt=english_select_from_prompt + " " + english_order_by_prompt,
+        #     sql_statement=sql_select_statement + " " + sql_order_by_statement, # ground truth
+        # )
+        
+
+        if self.use_aggregates:
+            # Keep the original table_fields for table definition
+            original_table_fields = selected_fields
+            
+            # Get SelectFields for the SELECT statement
+            (selected_fields, sql_select_statement) = get_sql_select_from(table_name, original_table_fields, self.use_aggregates)
+            (english_select_from_prompt, table_name, selected_fields), agg_phrases = get_english_select_from(table_name, selected_fields, self.use_synonyms_table, self.use_synonyms_field)
+            if self.use_order_by:
+                (order_by_fields, sql_order_by_statement) = get_sql_order_by(selected_fields)
+                english_order_by_prompt,  order_by_phrase = get_english_order_by(order_by_fields)
+                
+            else:
+                order_by_fields = []
+                english_order_by_prompt = ""
+                sql_order_by_statement = ""  
+            batch_item_to_return = BatchItem(
+                command_set=2,
+                table_name=TableName(name=table_name.name, synonym=table_name.synonym, use_synonym=table_name.use_synonym), 
+                table_fields=original_table_fields,  # Use TableFields here
+                create_statement=get_sql_create_table_from_selected_fields(table_name, original_table_fields)[2],  # And here
+                select=selected_fields,  # Use SelectFields here
+                order_by=order_by_fields,
+                order_by_phrase = order_by_phrase,
+                agg_phrases = agg_phrases,
+                english_prompt=english_select_from_prompt + " " + english_order_by_prompt,
+                sql_statement=sql_select_statement + " " + sql_order_by_statement,
+            )
+
+        
+        return batch_item_to_return
     def get_generators(self):
         """Return all the generators"""
         generators = {
@@ -211,7 +293,15 @@ class CorruptFeatureTestGenerator:
             DEFCREATETABLE: self._corrupt_def_create_table,
             DEFTABLENAME: self._corrupt_def_table_name,
             DEFFIELDSEPARATOR: self._corrupt_def_field_separator,
-            DEFFIELDNAME: self._corrupt_def_field_name
+            DEFFIELDNAME: self._corrupt_def_field_name,
+            DEFORDERBYFIELD1: self._corrupt_def_order_by_field1,
+            DEFORDERBYFIELD2: self._corrupt_def_order_by_field2,
+            DEFORDERBYDIRECTION1: self._corrupt_def_order_by_direction1,
+            DEFORDERBYDIRECTION2: self._corrupt_def_order_by_direction2,
+            DEFAGGREGATEFUNCTION1: self._corrupt_def_aggregate_function1,
+            DEFAGGREGATEFUNCTION2: self._corrupt_def_aggregate_function2,
+            DEFAGGREGATEFIELD1: self._corrupt_def_aggregate_field1,
+            DEFAGGREGATEFIELD2: self._corrupt_def_aggregate_field2
         }
         return generators
 
@@ -284,7 +374,6 @@ class CorruptFeatureTestGenerator:
         names = self.novel_table_names if self.use_novel_names else self.clean_table_names
         wrong_table = random.choice([t for t in names if t != table_str])
         corrupted = base.english_prompt.replace(table_str, wrong_table)
-
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGTABLENAME, corrupt_english_prompt=corrupted )
         # For semantic models, the clean token will not appear in the answer
         self.set_clean_corrupt_tokens(item, table_str, wrong_table, base.table_name.name, False)
@@ -348,3 +437,272 @@ class CorruptFeatureTestGenerator:
         item = CorruptibleBatchItem( **vars(base), feature_name=DEFFIELDSEPARATOR, corrupt_create_statement=corrupted )   
         self.set_clean_corrupt_tokens(item, ",", wrong_separator, ",", True)         
         return item
+
+    def _corrupt_def_order_by_field1(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if not self.use_order_by or not base.order_by:
+            # Try again if we don't have an ORDER BY
+            return self._corrupt_def_order_by_field()
+            
+        original_field = base.order_by[0].name
+        print(base.order_by)
+        # Get possible fields excluding the current order by field
+        names = self.novel_field_names if self.use_novel_names else self.clean_field_names
+        base_fields = [field.name for field in base.table_fields]
+        wrong_field = random.choice([f for f in names if f != original_field])
+        
+        # Corrupt the ORDER BY field in SQL statement
+        corrupted = base.sql_statement.replace(f"ORDER BY {original_field}", f"ORDER BY {wrong_field}")
+        parts = base.english_prompt.rsplit(original_field, 1)
+        if len(parts) > 1:
+            corrupted_eng = wrong_field.join(parts)
+        else:
+            corrupted_eng = base.english_prompt
+
+        corrupted_eng = base.english_prompt.replace(original_field, wrong_field)
+        item = CorruptibleBatchItem(**vars(base), 
+                                feature_name=DEFORDERBYFIELD1,
+                                corrupt_english_prompt=corrupted_eng,
+                                corrupt_sql_statement=corrupted)
+        self.set_clean_corrupt_tokens(item, original_field, wrong_field, original_field, False)
+        return item
+    
+
+    def _corrupt_def_order_by_field2(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if not self.use_order_by or not base.order_by:
+            # Try again if we don't have an ORDER BY
+            return self._corrupt_def_order_by_field()
+        if len(base.order_by) < 2:
+            original_field = base.order_by[0].name
+        else:
+            original_field = base.order_by[1].name
+        # Get possible fields excluding the current order by field
+        names = self.novel_field_names if self.use_novel_names else self.clean_field_names
+        base_fields = [field.name for field in base.table_fields]
+        wrong_field = random.choice([f for f in names if f != original_field])
+        # Corrupt the ORDER BY field in SQL statement
+        corrupted = base.sql_statement.replace(f"ORDER BY {original_field}", f"ORDER BY {wrong_field}")
+        parts = base.english_prompt.rsplit(original_field, 1)
+        if len(parts) > 1:
+            corrupted_eng = wrong_field.join(parts)
+        else:
+            corrupted_eng = base.english_prompt
+
+        corrupted_eng = base.english_prompt.replace(original_field, wrong_field)
+        item = CorruptibleBatchItem(**vars(base), 
+                                feature_name=DEFORDERBYFIELD1,
+                                corrupt_english_prompt=corrupted_eng,
+                                corrupt_sql_statement=corrupted)
+        self.set_clean_corrupt_tokens(item, original_field, wrong_field, original_field, False)
+        return item
+    
+
+    def _corrupt_def_order_by_direction1(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if not self.use_order_by or not base.order_by:
+            # Try again if we don't have an ORDER BY
+            return self._corrupt_def_order_by_direction()
+        
+        original_direction = (base.order_by[0].aggregate == "ASC") if isinstance(base.order_by[0], SelectField) else base.order_by[0].asc# Direction is stored in aggregate field
+        # Get opposite direction
+        wrong_direction = "DESC" if original_direction else "ASC"
+        orig_direct = "ASC" if original_direction else "DESC"
+        # Corrupt the direction in SQL statement
+        parts = base.sql_statement.split(f"{orig_direct}", 1)
+        corrupted = wrong_direction.join(parts)
+        original_eng_order = base.order_by_phrase[0]
+        wrong_order = get_english_order_by_phrase(not original_direction)
+        corrupted_eng = base.english_prompt.replace(original_eng_order, wrong_order)
+        item = CorruptibleBatchItem(**vars(base),
+                                feature_name=DEFORDERBYDIRECTION1,
+                                corrupt_sql_statement=corrupted,
+                                corrupt_english_prompt=corrupted_eng)
+        self.set_clean_corrupt_tokens(item, original_direction, wrong_direction, original_direction, False)
+        return item
+
+
+    def _corrupt_def_order_by_direction2(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if not self.use_order_by or not base.order_by:
+            # Try again if we don't have an ORDER BY
+            return self._corrupt_def_order_by_direction()
+        if len(base.order_by) < 2:
+            original_direction = (base.order_by[0].aggregate == "ASC") if isinstance(base.order_by[0], SelectField) else base.order_by[0].asc
+        else:
+            original_direction = (base.order_by[1].aggregate == "ASC") if isinstance(base.order_by[1], SelectField) else base.order_by[1].asc# Direction is stored in aggregate field
+        # Get opposite direction
+        wrong_direction = "DESC" if original_direction else "ASC"
+        orig_direct = "ASC" if original_direction else "DESC"
+        # Corrupt the direction in SQL statement
+        parts = base.sql_statement.rsplit(f"{orig_direct}", 1)
+        corrupted = wrong_direction.join(parts)
+        if len(base.order_by_phrase) < 2:
+            original_eng_order = base.order_by_phrase[0]
+        else:
+            original_eng_order = base.order_by_phrase[1]
+        wrong_order = get_english_order_by_phrase(not original_direction)
+        corrupted_eng = base.english_prompt.replace(original_eng_order, wrong_order)
+        item = CorruptibleBatchItem(**vars(base),
+                                feature_name=DEFORDERBYDIRECTION2,
+                                corrupt_sql_statement=corrupted,
+                                corrupt_english_prompt=corrupted_eng)
+        self.set_clean_corrupt_tokens(item, original_direction, wrong_direction, original_direction, False)
+        return item
+    
+
+    def _corrupt_def_aggregate_function1(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if not self.use_aggregates or not ('(' in base.sql_statement):
+            print('Corruption impossible')
+        
+        if '(' in base.sql_statement:
+            original_agg = base.sql_statement.split('(')[0].split(' ')[-1]
+            field_name = base.sql_statement.split('(')[1].split(')')[0]
+            # Get wrong aggregate function
+            wrong_agg = random.choice([a for a in ["SUM", "COUNT", "AVG", "MAX", "MIN"] 
+                                    if a != original_agg])
+            
+            # Corrupt the aggregate function in SQL statement
+            corrupted = base.sql_statement.replace(f"{original_agg}({field_name})",
+                                                f"{wrong_agg}({field_name})")
+            
+            eng_agg = base.agg_phrases[0]
+            if original_agg == "SUM":
+                phrases = get_english_sum_phrases()
+            elif original_agg == "AVG":
+                phrases = get_english_avg_phrases()
+            elif original_agg == "MIN":
+                phrases = get_english_min_phrases()
+            elif original_agg == "MAX":
+                phrases = get_english_max_phrases()
+            elif original_agg == "COUNT":
+                phrases = get_english_count_phrases()
+            
+            wrong_agg_phrase = random.choice([p for p in phrases if p != eng_agg])
+            corrupted_eng = base.english_prompt.replace(eng_agg, wrong_agg_phrase)
+    
+            item = CorruptibleBatchItem(**vars(base),
+                                    feature_name=DEFAGGREGATEFUNCTION1,
+                                    corrupt_english_prompt=corrupted_eng,
+                                    corrupt_sql_statement=corrupted)
+            self.set_clean_corrupt_tokens(item, original_agg, wrong_agg, original_agg, False)
+            return item
+                
+        return self._corrupt_def_aggregate_function1()
+    
+    def _corrupt_def_aggregate_function2(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if not self.use_aggregates or not ('(' in base.sql_statement):
+            print('Corruption impossible')
+        
+        if '(' in base.sql_statement:
+            parts = base.sql_statement.split('(')
+            if len(parts) > 2:  # Check if there's a second parenthesis
+                # For first aggregate
+                original_agg = parts[1].split(' ')[-1]  # Get agg function before second '('
+                field_name = parts[2].split(')')[0]  # Get field in second parentheses
+                
+            else:
+                original_agg = parts[0].split(' ')[-1]
+                field_name = parts[1].split(')')[0]
+
+            # Get wrong aggregate function
+            wrong_agg = random.choice([a for a in ["SUM", "COUNT", "AVG", "MAX", "MIN"] 
+                                    if a != original_agg])
+            
+            # Corrupt the aggregate function in SQL statement
+            corrupted = base.sql_statement.replace(f"{original_agg}({field_name})",
+                                                f"{wrong_agg}({field_name})")
+            
+            eng_agg = base.agg_phrases[0]
+            if original_agg == "SUM":
+                phrases = get_english_sum_phrases()
+            elif original_agg == "AVG":
+                phrases = get_english_avg_phrases()
+            elif original_agg == "MIN":
+                phrases = get_english_min_phrases()
+            elif original_agg == "MAX":
+                phrases = get_english_max_phrases()
+            elif original_agg == "COUNT":
+                phrases = get_english_count_phrases()
+            
+            wrong_agg_phrase = random.choice([p for p in phrases if p != eng_agg])
+            corrupted_eng = base.english_prompt.replace(eng_agg, wrong_agg_phrase)
+    
+            item = CorruptibleBatchItem(**vars(base),
+                                    feature_name=DEFAGGREGATEFUNCTION2,
+                                    corrupt_english_prompt=corrupted_eng,
+                                    corrupt_sql_statement=corrupted)
+            self.set_clean_corrupt_tokens(item, original_agg, wrong_agg, original_agg, False)
+            return item
+                
+        return self._corrupt_def_aggregate_function2()
+    
+
+
+    def _corrupt_def_aggregate_field1(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if not self.use_aggregates or not ('(' in base.sql_statement):
+            print('Corruption impossible')
+        
+        # Find first aggregated field
+        if '(' in base.sql_statement:
+            agg_func = base.sql_statement.split('(')[0]
+            original_field = base.sql_statement.split('(')[1].split(')')[0]
+            
+            # Get wrong field name
+            names = self.novel_field_names if self.use_novel_names else self.clean_field_names
+            wrong_field = random.choice([f for f in names if f != original_field])
+            
+            # Corrupt the field name inside the aggregate
+            corrupted = base.sql_statement.replace(f"{agg_func}({original_field})",
+                                                f"{agg_func}({wrong_field})")
+            
+            corrupted_eng = base.english_prompt.replace(original_field, wrong_field)
+            
+            item = CorruptibleBatchItem(**vars(base),
+                                    feature_name=DEFAGGREGATEFIELD1,
+                                    corrupt_english_prompt=corrupted_eng,
+                                    corrupt_sql_statement=corrupted)
+            self.set_clean_corrupt_tokens(item, original_field, wrong_field, original_field, False)
+            return item
+                
+        return self._corrupt_def_aggregate_field1()
+    
+
+    def _corrupt_def_aggregate_field2(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if not self.use_aggregates or not ('(' in base.sql_statement):
+            print('Corruption impossible')
+        
+        # Find first aggregated field
+        if '(' in base.sql_statement:
+            parts = base.sql_statement.split('(')
+            if len(parts) > 2:  # Check if there's a second parenthesis
+                # For first aggregate
+                agg_func = parts[1].split(' ')[-1]  # Get agg function before second '('
+                original_field = parts[2].split(')')[0]  # Get field in second parentheses
+                
+            else:
+                agg_func = parts[0].split(' ')[-1]
+                original_field = parts[1].split(')')[0]
+            
+            # Get wrong field name
+            names = self.novel_field_names if self.use_novel_names else self.clean_field_names
+            wrong_field = random.choice([f for f in names if f != original_field])
+            
+            # Corrupt the field name inside the aggregate
+            corrupted = base.sql_statement.replace(f"{agg_func}({original_field})",
+                                                f"{agg_func}({wrong_field})")
+            
+            corrupted_eng = base.english_prompt.replace(original_field, wrong_field)
+            
+            item = CorruptibleBatchItem(**vars(base),
+                                    feature_name=DEFAGGREGATEFIELD2,
+                                    corrupt_english_prompt=corrupted_eng,
+                                    corrupt_sql_statement=corrupted)
+            self.set_clean_corrupt_tokens(item, original_field, wrong_field, original_field, False)
+            return item
+                
+        return self._corrupt_def_aggregate_field2()

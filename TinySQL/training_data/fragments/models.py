@@ -74,6 +74,8 @@ class BatchItem:
     create_statement: str # aka Context
     select: List[SelectField]
     order_by: List[OrderField]
+    order_by_phrase: List[str]
+    agg_phrases: List[str]
     english_prompt: str # aka Instruction
     sql_statement: str # aka Response
 
