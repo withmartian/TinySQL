@@ -3,7 +3,7 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from nnsight import LanguageModel
-from TinySQL.load_data.load_constants import BM_TUTORIAL, BM_TINY_STORIES, BM_QWEN, BM_LLAMA, BM_GRANITE, BM_SMOL, BM1_CS1_SEMANTIC, BM1_CS2_SEMANTIC, BM1_CS3_SEMANTIC, BM1_CS1_NONSEMANTIC, BM1_CS2_NONSEMANTIC, BM1_CS3_NONSEMANTIC, BM2_CS1_NONSEMANTIC, BM2_CS2_NONSEMANTIC, BM2_CS3_NONSEMANTIC, BM3_CS1_NONSEMANTIC, BM3_CS2_NONSEMANTIC, BM3_CS3_NONSEMANTIC    
+from TinySQL.load_data.load_constants import BM_TUTORIAL, BM_TINY_STORIES, BM_QWEN, BM_LLAMA, BM_GRANITE, BM_SMOL, BM1_CS1_SEMANTIC, BM1_CS2_SEMANTIC, BM1_CS3_SEMANTIC, BM2_CS1_SEMANTIC, BM2_CS2_SEMANTIC, BM2_CS3_SEMANTIC, BM3_CS1_SEMANTIC, BM3_CS2_SEMANTIC, BM3_CS3_SEMANTIC, BM1_CS1_NONSEMANTIC, BM1_CS2_NONSEMANTIC, BM1_CS3_NONSEMANTIC, BM2_CS1_NONSEMANTIC, BM2_CS2_NONSEMANTIC, BM2_CS3_NONSEMANTIC, BM3_CS1_NONSEMANTIC, BM3_CS2_NONSEMANTIC, BM3_CS3_NONSEMANTIC
 
 # Load the tokenizer and trained model for model 1, 2, or 3 and command set 0 (base model), 1, 2, or 3
 # If you are changing the models, consider updating the HF collection withmartian/tinysql as well. 
@@ -58,6 +58,13 @@ def sql_interp_model_location(model_num: int, cs_num: int, synonym: bool = True)
                 
     # Model 2 variants (all non-semantic)
     elif model_num == 2:
+        if synonym:  # Semantic variants
+            if cs_num == 1:
+                return BM2_CS1_SEMANTIC
+            elif cs_num == 2:
+                return BM2_CS2_SEMANTIC
+            elif cs_num == 3:
+                return BM2_CS3_SEMANTIC
         if cs_num == 1:
             return BM2_CS1_NONSEMANTIC
         elif cs_num == 2:
@@ -67,6 +74,13 @@ def sql_interp_model_location(model_num: int, cs_num: int, synonym: bool = True)
             
     # Model 3 variants (all non-semantic)
     elif model_num == 3:
+        if synonym:  # Semantic variants
+            if cs_num == 1:
+                return BM3_CS1_SEMANTIC
+            elif cs_num == 2:
+                return BM3_CS2_SEMANTIC
+            elif cs_num == 3:
+                return BM3_CS3_SEMANTIC
         if cs_num == 1:
             return BM3_CS1_NONSEMANTIC
         elif cs_num == 2:
@@ -180,7 +194,7 @@ def replace_weak_references(obj):
 # Return key size information about the models. Only handles models 1 to 3 for now.
 def get_model_sizes( model_num, model, show = True ):
         
-    N_LAYERS = len(model.transformer.h) if model_num == 1 else model.model.layers
+    N_LAYERS = len(model.transformer.h) if model_num == 1 else len(model.model.layers)
     N_HEADS = model.config.num_attention_heads
 
     D_MODEL = model.transformer.wte.embedding_dim if model_num == 1 else model.config.hidden_size
@@ -188,5 +202,9 @@ def get_model_sizes( model_num, model, show = True ):
 
     if show:
         print("N_LAYERS="+str(N_LAYERS), "N_HEADS="+str(N_HEADS), "D_MODEL="+str(D_MODEL), "D_HEAD="+str(D_HEAD))
+
+    assert N_LAYERS > 0 and N_HEADS > 0, "Model architecture parameters must be positive"
+    assert D_MODEL > 0 and D_HEAD > 0, "Model dimensions must be positive"
+    assert D_MODEL == N_HEADS * D_HEAD, f"D_MODEL ({D_MODEL}) must equal N_HEADS * D_HEAD ({N_HEADS} * {D_HEAD} = {N_HEADS * D_HEAD})"
 
     return N_LAYERS, N_HEADS, D_MODEL, D_HEAD
