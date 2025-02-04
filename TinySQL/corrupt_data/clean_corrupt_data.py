@@ -268,12 +268,12 @@ class CorruptFeatureTestGenerator:
             (english_select_from_prompt, table_name, selected_fields), agg_phrases = get_english_select_from(table_name, selected_fields, self.use_synonyms_table, self.use_synonyms_field)
             if self.use_order_by:
                 (order_by_fields, sql_order_by_statement) = get_sql_order_by(selected_fields)
-                english_order_by_prompt,  order_by_phrase = get_english_order_by(order_by_fields)
-                
+                english_order_by_prompt, order_by_phrase = get_english_order_by(order_by_fields)
             else:
                 order_by_fields = []
                 english_order_by_prompt = ""
                 sql_order_by_statement = ""  
+
             batch_item_to_return = BatchItem(
                 command_set=2,
                 table_name=TableName(name=table_name.name, synonym=table_name.synonym, use_synonym=table_name.use_synonym), 

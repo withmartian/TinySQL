@@ -60,7 +60,9 @@ def dict_to_batchitem(row):
         select=select_fields,
         order_by=order_by_fields,
         english_prompt=row['english_prompt'],
-        sql_statement=row['sql_statement']
+        sql_statement=row['sql_statement'],
+        order_by_phrase=None, # TODO: add order by phrase
+        agg_phrases=None, # TODO: add order by phrase?
     )
 
     return batch_item

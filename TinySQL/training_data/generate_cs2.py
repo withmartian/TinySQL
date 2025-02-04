@@ -15,16 +15,17 @@ def generate_cs2(batch_size, order_by_clause_probability=0.9, use_aggregates=Fal
 
         (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, use_aggregates)
         
-        (english_select_from_prompt, table_name, selected_fields) = get_english_select_from(table_name, selected_fields, use_synonyms)
+        (english_select_from_prompt, table_name, selected_fields), agg_phrases = get_english_select_from(table_name, selected_fields, use_synonyms, use_synonyms)
 
         # Randomly decide whether to include an ORDER BY clause
         include_order_by = i < batch_size * order_by_clause_probability
         if include_order_by:
             (order_by_fields, sql_order_by_statement) = get_sql_order_by(table_fields)
-            english_order_by_prompt = get_english_order_by(order_by_fields)
+            english_order_by_prompt, order_by_phrase = get_english_order_by(order_by_fields)
         else:
             order_by_fields = []
             english_order_by_prompt = ""
+            order_by_phrase = ""
             sql_order_by_statement = ""
 
         batch_item = BatchItem(
@@ -36,6 +37,8 @@ def generate_cs2(batch_size, order_by_clause_probability=0.9, use_aggregates=Fal
             order_by=order_by_fields,
             english_prompt=english_select_from_prompt + " " + english_order_by_prompt,
             sql_statement=sql_select_statement + " " + sql_order_by_statement, # ground truth
+            order_by_phrase=order_by_phrase,
+            agg_phrases=agg_phrases,
         )
 
         batch.append(batch_item)

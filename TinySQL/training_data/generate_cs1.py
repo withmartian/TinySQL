@@ -20,7 +20,7 @@ def get_english_order_by(fields: list[OrderField]) -> str:
     return answer, english_order
 
 
-def get_english_select_from(table_name: TableName, fields: list[SelectField], use_synonyms_table: bool, use_synonyms_field) -> str:
+def get_english_select_from(table_name: TableName, fields: list[SelectField], use_synonyms_table: bool = False, use_synonyms_field: bool = False) -> str:
     template = get_english_select_from_phrase()
     
     # Decide table name: 80% chance to use synonym if use_synonyms is True.
@@ -86,7 +86,8 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms_table=False, 
 
         (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, False)
 
-        (english_select_from_prompt, table_name, selected_fields) = get_english_select_from(table_name, selected_fields, use_synonyms_table, use_synonyms_field)
+        (english_select_from_prompt, table_name, selected_fields), agg_phrases = get_english_select_from(table_name, 
+            fields=selected_fields, use_synonyms_table=use_synonyms_table, use_synonyms_field=use_synonyms_field)
 
         batch_item = BatchItem(
             command_set=1, 
@@ -97,6 +98,8 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms_table=False, 
             order_by=None,
             english_prompt=english_select_from_prompt,
             sql_statement=sql_select_statement, # ground truth
+            order_by_phrase=None,
+            agg_phrases=agg_phrases,
         )
 
         batch.append(batch_item)
