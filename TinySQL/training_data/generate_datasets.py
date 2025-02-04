@@ -69,7 +69,7 @@ def dict_to_batchitem(row):
 
 def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dataset_name, use_synonyms : bool, push_to_hf : bool):
     # Generate dataset using the provided CS function
-    dataset = generate_cs_function(batch_size, use_synonyms=use_synonyms)
+    dataset = generate_cs_function(batch_size, use_synonyms_table=use_synonyms, use_synonyms_field=use_synonyms)
 
     # Create a dataframe
     dataset_dicts = [batchitem_to_dict(item) for item in dataset]
@@ -115,6 +115,7 @@ def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dat
             print("SQL:", sample['sql_statement'])
         accuracy += score
     print(f"Dataset '{dataset_name}' Accuracy:", (accuracy / len(train_dataset)) * 100)
+
 
 # Main function
 if __name__ == '__main__':
