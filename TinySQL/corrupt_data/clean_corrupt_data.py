@@ -111,7 +111,6 @@ class CorruptibleBatchItem(BatchItem):
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = 1, cs_num: int = 1, tokenizer = None, 
                  use_novel_names: bool = False, use_order_by: bool = False, use_aggregates:bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False, 
-                 use_novel_names: bool = False, use_order_by: bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False, 
                  num_fields: int = 2):
         self.model_num = model_num
         self.cs_num = cs_num
@@ -208,6 +207,7 @@ class CorruptFeatureTestGenerator:
         order_by_clause = ""
         order_by_english = ""
         order_by_fields = []
+        order_by_phrase = ""
         
         if self.use_order_by:
             order_by_field = random.choice(fields)
@@ -268,12 +268,12 @@ class CorruptFeatureTestGenerator:
             (english_select_from_prompt, table_name, selected_fields), agg_phrases = get_english_select_from(table_name, selected_fields, self.use_synonyms_table, self.use_synonyms_field)
             if self.use_order_by:
                 (order_by_fields, sql_order_by_statement) = get_sql_order_by(selected_fields)
-                english_order_by_prompt,  order_by_phrase = get_english_order_by(order_by_fields)
-                
+                english_order_by_prompt, order_by_phrase = get_english_order_by(order_by_fields)
             else:
                 order_by_fields = []
                 english_order_by_prompt = ""
                 sql_order_by_statement = ""  
+
             batch_item_to_return = BatchItem(
                 command_set=2,
                 table_name=TableName(name=table_name.name, synonym=table_name.synonym, use_synonym=table_name.use_synonym), 
@@ -452,7 +452,7 @@ class CorruptFeatureTestGenerator:
         print(base.order_by)
         # Get possible fields excluding the current order by field
         names = self.novel_field_names if self.use_novel_names else self.clean_field_names
-        base_fields = [field.name for field in base.table_fields]
+        #base_fields = [field.name for field in base.table_fields]
         wrong_field = random.choice([f for f in names if f != original_field])
         
         # Corrupt the ORDER BY field in SQL statement
@@ -483,7 +483,7 @@ class CorruptFeatureTestGenerator:
             original_field = base.order_by[1].name
         # Get possible fields excluding the current order by field
         names = self.novel_field_names if self.use_novel_names else self.clean_field_names
-        base_fields = [field.name for field in base.table_fields]
+        #base_fields = [field.name for field in base.table_fields]
         wrong_field = random.choice([f for f in names if f != original_field])
         # Corrupt the ORDER BY field in SQL statement
         corrupted = base.sql_statement.replace(f"ORDER BY {original_field}", f"ORDER BY {wrong_field}")
@@ -557,7 +557,7 @@ class CorruptFeatureTestGenerator:
 
     def _corrupt_def_aggregate_function1(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        if not self.use_aggregates or not ('(' in base.sql_statement):
+        if not self.use_aggregates or ('(' not in base.sql_statement):
             print('Corruption impossible')
         
         if '(' in base.sql_statement:
@@ -597,7 +597,7 @@ class CorruptFeatureTestGenerator:
     
     def _corrupt_def_aggregate_function2(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        if not self.use_aggregates or not ('(' in base.sql_statement):
+        if not self.use_aggregates or ('(' not in base.sql_statement):
             print('Corruption impossible')
         
         if '(' in base.sql_statement:
@@ -647,7 +647,7 @@ class CorruptFeatureTestGenerator:
 
     def _corrupt_def_aggregate_field1(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        if not self.use_aggregates or not ('(' in base.sql_statement):
+        if not self.use_aggregates or ('(' not in base.sql_statement):
             print('Corruption impossible')
         
         # Find first aggregated field
@@ -677,7 +677,7 @@ class CorruptFeatureTestGenerator:
 
     def _corrupt_def_aggregate_field2(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        if not self.use_aggregates or not ('(' in base.sql_statement):
+        if not self.use_aggregates or ('(' not in base.sql_statement):
             print('Corruption impossible')
         
         # Find first aggregated field
