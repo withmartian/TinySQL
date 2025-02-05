@@ -1,4 +1,4 @@
-from TinySQL.load_data import load_sql_interp_model
+from TinySQL.load_data import load_sql_interp_model, get_model_sizes
 from TinySQL.training_data import (generate_cs1, generate_inputs_from_BatchItems)
 from tests.test_ablate_m1 import TestAblate
 from tests.test_util import TEST_USE_FLASH_ATTENTION,TEST_DEVICE_MAP
@@ -8,7 +8,9 @@ from tests.test_util import TEST_USE_FLASH_ATTENTION,TEST_DEVICE_MAP
 class TestAblate_BM2(TestAblate):
 
     def setUp(self):
-        tokenizer, model = load_sql_interp_model(2, 0, use_flash_attention=TEST_USE_FLASH_ATTENTION, device_map=TEST_DEVICE_MAP)
+        model_num = 2
+        tokenizer, model = load_sql_interp_model(model_num, 0, use_flash_attention=TEST_USE_FLASH_ATTENTION, device_map=TEST_DEVICE_MAP)
+        get_model_sizes(model_num, model)
         batch_items = generate_cs1(25)
         (_, inputs) = generate_inputs_from_BatchItems(tokenizer, batch_items) 
         cached_acts = None #collect_m2_activations(model, inputs)     
