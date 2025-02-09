@@ -385,11 +385,11 @@ class CorruptFeatureTestGenerator:
      
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
-        field_str = base.table_fields[0].name_str
+        field_str = base.table_fields[0].synonym if self.use_synonyms_field else base.table_fields[0].name
         base_fields = [field.synonym for field in base.table_fields] if self.use_synonyms_field else [field.name for field in base.table_fields]  
         names = self.novel_field_names if self.use_novel_names else self.clean_field_names
         wrong_field = random.choice([f for f in names if f not in base_fields])
-        corrupted = base.english_prompt.replace(field_str, wrong_field)
+        corrupted = base.english_prompt.replace(field_str, wrong_field, 1)
 
         item = CorruptibleBatchItem( **vars(base), feature_name=ENGFIELDNAME, corrupt_english_prompt=corrupted )
         # For semantic models, the clean token will not appear in the answer
