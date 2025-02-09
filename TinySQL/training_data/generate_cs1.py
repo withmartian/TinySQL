@@ -1,35 +1,37 @@
 import random
-from .fragments.english_aggregates import get_english_sum_phrases, get_english_avg_phrases, get_english_min_phrases, get_english_max_phrases, get_english_count_phrases
-from .fragments.english_select_from import get_english_select_from_phrase
-from .fragments.english_order_by import get_english_order_by_phrase
-from .sql_create_table import get_sql_create_table
-from .sql_select_from import get_sql_select_from
-from .fragments.models import TableName, BatchItem, OrderField, SelectField, trim_newlines_and_multiple_spaces
+from TinySQL.training_data.fragments.english_aggregates import get_english_sum_phrases, get_english_avg_phrases, get_english_min_phrases, get_english_max_phrases, get_english_count_phrases
+from TinySQL.training_data.fragments.english_select_from import get_english_select_from_phrase
+from TinySQL.training_data.fragments.english_order_by import get_english_order_by_phrase
+from TinySQL.training_data.sql_create_table import get_sql_create_table
+from TinySQL.training_data.sql_select_from import get_sql_select_from
+from TinySQL.training_data.fragments.models import TableName, BatchItem, OrderField, SelectField, trim_newlines_and_multiple_spaces
 
 
 def get_english_order_by(fields: list[OrderField]) -> str:
     answer = ""
-
+    english_order = []
     for i, field in enumerate(fields):
         english = get_english_order_by_phrase(field.asc)
+        english_order.append(english)
         if i > 0:
             answer += ","
         answer += " " + english + " " + field.name
     
-    return answer
+    return answer, english_order
 
 
-def get_english_select_from(table_name: TableName, fields: list[SelectField], use_synonyms: bool) -> str:
+def get_english_select_from(table_name: TableName, fields: list[SelectField], use_synonyms_table: bool = False, use_synonyms_field: bool = False) -> str:
     template = get_english_select_from_phrase()
     
     # Decide table name: 80% chance to use synonym if use_synonyms is True.
-    table_name.use_synonym = use_synonyms and random.random() < 0.8
+    table_name.use_synonym = use_synonyms_table and random.random() < 0.8
     if table_name.use_synonym:
         table_str = table_name.synonym
     else:
         table_str = table_name.name
 
     english_fields = ""
+    agg_phrases = []
     for i, field in enumerate(fields):
         # Determine which aggregate phrase set to use, if any.
         phrases = None
@@ -47,7 +49,7 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField], us
             phrases = get_english_count_phrases()
 
         # Decide field name: 50% chance to use synonym if use_synonyms is True.
-        field.use_synonym = use_synonyms and random.random() < 0.5
+        field.use_synonym = use_synonyms_field and random.random() < 0.5
         if field.use_synonym:
             field_str = field.synonym
         else:
@@ -57,7 +59,9 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField], us
         if phrases is None:
             english_field = field_str
         else:
-            english_field = f"{random.choice(phrases)} {field_str}"
+            agg_phrase = random.choice(phrases)
+            english_field = f"{agg_phrase} {field_str}"
+            agg_phrases.append(agg_phrase)
 
         english_fields += english_field
 
@@ -70,11 +74,11 @@ def get_english_select_from(table_name: TableName, fields: list[SelectField], us
     # Create the final English phrase
     english = template.replace("[fields]", english_fields).replace("[table]", table_str)
     
-    return (english, table_name, fields)
+    return (english, table_name, fields), agg_phrases
 
 
 # Generate a batch of "command set 1" prompts and answers. These are SQL SELECT statements with a single table and a few fields.
-def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms=False) -> list[BatchItem]:
+def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms_table=False, use_synonyms_field=False) -> list[BatchItem]:
 
     batch = []
     for i in range(batch_size):
@@ -82,7 +86,8 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms=False) -> lis
 
         (selected_fields, sql_select_statement) = get_sql_select_from(table_name, table_fields, False)
 
-        (english_select_from_prompt, table_name, selected_fields) = get_english_select_from(table_name, selected_fields, use_synonyms)
+        (english_select_from_prompt, table_name, selected_fields), agg_phrases = get_english_select_from(table_name, 
+            fields=selected_fields, use_synonyms_table=use_synonyms_table, use_synonyms_field=use_synonyms_field)
 
         batch_item = BatchItem(
             command_set=1, 
@@ -93,6 +98,8 @@ def generate_cs1(batch_size, min_cols=2, max_cols=12, use_synonyms=False) -> lis
             order_by=None,
             english_prompt=english_select_from_prompt,
             sql_statement=sql_select_statement, # ground truth
+            order_by_phrase=None,
+            agg_phrases=agg_phrases,
         )
 
         batch.append(batch_item)

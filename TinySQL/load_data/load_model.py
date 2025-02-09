@@ -194,10 +194,11 @@ def replace_weak_references(obj):
 # Return key size information about the models. Only handles models 1 to 3 for now.
 def get_model_sizes( model_num, model, show = True ):
         
-    N_LAYERS = len(model.transformer.h) if model_num == 1 else len(model.model.layers)
-    N_HEADS = model.config.num_attention_heads
+    model_config = model._model.config if model.config is None else model.config
 
-    D_MODEL = model.transformer.wte.embedding_dim if model_num == 1 else model.config.hidden_size
+    N_LAYERS = len(model.transformer.h) if model_num == 1 else len(model.model.layers)
+    N_HEADS = model_config.num_attention_heads
+    D_MODEL = model.transformer.wte.embedding_dim if model_num == 1 else model_config.hidden_size
     D_HEAD = D_MODEL // N_HEADS  
 
     if show:
