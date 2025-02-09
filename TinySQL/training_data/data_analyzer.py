@@ -11,10 +11,29 @@ from TinySQL.training_data.generate_cs2 import evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import evaluate_cs3_prediction
 
 import diskcache as dc
-import time
 
 # Initialize a disk cache
 cache = dc.Cache('./cache_dir')
+
+
+def calculate_similarity_simple(text1, text2):
+   def extract_sql_parts(text):
+       select_part = text[text.find("SELECT") + 7:text.find("FROM")].strip()
+       from_part = text[text.find("FROM") + 5:].strip()
+       columns = [c.strip() for c in select_part.split(',')]
+       return columns, from_part
+
+   cols1, from1 = extract_sql_parts(text1)
+   cols2, from2 = extract_sql_parts(text2)
+
+   score = 0
+   if "SELECT" in text1 and "SELECT" in text2: score += 0.2
+   if "FROM" in text1 and "FROM" in text2: score += 0.2
+   if from1 == from2: score += 0.2
+   if cols1[0] == cols2[0]: score += 0.2
+   if len(cols1) >= 2 and len(cols2) >= 2:
+       if cols1[1] == cols2[1]: score += 0.2
+   return score
 
 
 # Decorator for disk caching
