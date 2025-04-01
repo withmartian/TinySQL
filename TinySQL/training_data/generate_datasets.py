@@ -7,6 +7,7 @@ from datasets import Dataset, DatasetDict
 from TinySQL.training_data.generate_cs1 import generate_cs1, evaluate_cs1_prediction
 from TinySQL.training_data.generate_cs2 import generate_cs2, evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import generate_cs3, evaluate_cs3_prediction
+from TinySQL.training_data.generate_cs4 import generate_cs4, evaluate_cs4_prediction
 from TinySQL.training_data.fragments.models import TableName, BatchItem, TableField, SelectField, OrderField
 
 def batchitem_to_dict(batch_item):
@@ -123,6 +124,7 @@ if __name__ == '__main__':
     use_synonyms = True
     suffix = "_synonyms" if use_synonyms else ""
 
-    generate_dataset(batch_size, generate_cs1, evaluate_cs1_prediction, "withmartian/cs1_dataset" + suffix, use_synonyms, True)
-    generate_dataset(batch_size, generate_cs2, evaluate_cs2_prediction, "withmartian/cs2_dataset" + suffix, use_synonyms, True)
-    generate_dataset(batch_size, generate_cs3, evaluate_cs3_prediction, "withmartian/cs3_dataset" + suffix, use_synonyms, True)
+    #generate_dataset(batch_size, generate_cs1, evaluate_cs1_prediction, "withmartian/cs1_dataset" + suffix, use_synonyms, True)
+    #generate_dataset(batch_size, generate_cs2, evaluate_cs2_prediction, "withmartian/cs2_dataset" + suffix, use_synonyms, True)
+    #generate_dataset(batch_size, generate_cs3, evaluate_cs3_prediction, "lukemarks/cs3_dataset" + suffix, use_synonyms, True)
+    generate_dataset(batch_size, generate_cs4, evaluate_cs4_prediction, "lukemarks/cs4_dataset" + suffix, use_synonyms, True)
