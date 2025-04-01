@@ -109,6 +109,32 @@ class TestCommandSet3(unittest.TestCase):
 
         generate_csn(5, 1, 0.9, False, 2, 6, True, True)
         generate_csn(5, 2, 0.9, False, 3, 3, True, True)
-        generate_csn(5, 3, 0.9, True, 1, 4, True, True)        
+        generate_csn(5, 3, 0.9, True, 1, 4, True, True)       
 
-    
+
+    def test_cs3_statistics(self):
+        batch_size = 1000
+        answer = generate_cs3(batch_size, use_synonyms_field=True)
+
+        max_english_chars = max_english_words = 0
+        max_create_chars = max_create_words = 0
+        max_sql_chars = max_sql_words = 0
+
+        for item in answer:
+            english = item.english_prompt
+            create = item.create_statement
+            sql = item.sql_statement
+
+            max_english_chars = max(max_english_chars, len(english))
+            max_english_words = max(max_english_words, len(english.split()))
+
+            max_create_chars = max(max_create_chars, len(create))
+            max_create_words = max(max_create_words, len(create.split()))
+
+            max_sql_chars = max(max_sql_chars, len(sql))
+            max_sql_words = max(max_sql_words, len(sql.split()))
+
+        print(f"Sample: {answer[0]}")
+        print(f"Max english_prompt: {max_english_words} words, {max_english_chars} characters")
+        print(f"Max create_statement: {max_create_words} words, {max_create_chars} characters")
+        print(f"Max sql_statement: {max_sql_words} words, {max_sql_chars} characters")        

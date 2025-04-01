@@ -95,3 +95,30 @@ class TestCommandSet1(unittest.TestCase):
             max_accuracy = self.include_prediction(i, prediction, accuracy, threshold, max_accuracy)
 
         print(f"Max Accuracy: {max_accuracy:.2f}")
+
+    def test_cs1_statistics(self):
+        batch_size = 1000
+        answer = generate_cs1(batch_size)
+
+        max_english_chars = max_english_words = 0
+        max_create_chars = max_create_words = 0
+        max_sql_chars = max_sql_words = 0
+
+        for item in answer:
+            english = item.english_prompt
+            create = item.create_statement
+            sql = item.sql_statement
+
+            max_english_chars = max(max_english_chars, len(english))
+            max_english_words = max(max_english_words, len(english.split()))
+
+            max_create_chars = max(max_create_chars, len(create))
+            max_create_words = max(max_create_words, len(create.split()))
+
+            max_sql_chars = max(max_sql_chars, len(sql))
+            max_sql_words = max(max_sql_words, len(sql.split()))
+
+        print(f"Max english_prompt: {max_english_words} words, {max_english_chars} characters")
+        print(f"Max create_statement: {max_create_words} words, {max_create_chars} characters")
+        print(f"Max sql_statement: {max_sql_words} words, {max_sql_chars} characters")
+        
