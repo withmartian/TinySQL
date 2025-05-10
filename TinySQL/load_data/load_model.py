@@ -3,7 +3,15 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from nnsight import LanguageModel
-from TinySQL.load_data.load_constants import BM_TUTORIAL, BM_TINY_STORIES, BM_QWEN, BM_LLAMA, BM_GRANITE, BM_SMOL, BM1_CS1_SEMANTIC, BM1_CS2_SEMANTIC, BM1_CS3_SEMANTIC, BM2_CS1_SEMANTIC, BM2_CS2_SEMANTIC, BM2_CS3_SEMANTIC, BM3_CS1_SEMANTIC, BM3_CS2_SEMANTIC, BM3_CS3_SEMANTIC, BM1_CS1_NONSEMANTIC, BM1_CS2_NONSEMANTIC, BM1_CS3_NONSEMANTIC, BM2_CS1_NONSEMANTIC, BM2_CS2_NONSEMANTIC, BM2_CS3_NONSEMANTIC, BM3_CS1_NONSEMANTIC, BM3_CS2_NONSEMANTIC, BM3_CS3_NONSEMANTIC
+from TinySQL.load_data.load_constants import (
+    BM_TUTORIAL, BM_TINY_STORIES, BM_QWEN, BM_LLAMA, BM_GRANITE, BM_SMOL,
+    BM1_CS1_SEMANTIC, BM1_CS2_SEMANTIC, BM1_CS3_SEMANTIC, BM1_CS4_SEMANTIC, BM1_CS5_SEMANTIC,
+    BM2_CS1_SEMANTIC, BM2_CS2_SEMANTIC, BM2_CS3_SEMANTIC,
+    BM3_CS1_SEMANTIC, BM3_CS2_SEMANTIC, BM3_CS3_SEMANTIC,
+    BM1_CS1_NONSEMANTIC, BM1_CS2_NONSEMANTIC, BM1_CS3_NONSEMANTIC,
+    BM2_CS1_NONSEMANTIC, BM2_CS2_NONSEMANTIC, BM2_CS3_NONSEMANTIC,
+    BM3_CS1_NONSEMANTIC, BM3_CS2_NONSEMANTIC, BM3_CS3_NONSEMANTIC
+)
 
 # Load the tokenizer and trained model for model 1, 2, or 3 and command set 0 (base model), 1, 2, or 3
 # If you are changing the models, consider updating the HF collection withmartian/tinysql as well. 
@@ -48,6 +56,10 @@ def sql_interp_model_location(model_num: int, cs_num: int, synonym: bool = True)
                 return BM1_CS2_SEMANTIC
             elif cs_num == 3:
                 return BM1_CS3_SEMANTIC
+            elif cs_num == 4:
+                return BM1_CS4_SEMANTIC
+            elif cs_num == 5:
+                return BM1_CS5_SEMANTIC
         else:  # Non-semantic variants
             if cs_num == 1:
                 return BM1_CS1_NONSEMANTIC
@@ -89,7 +101,6 @@ def sql_interp_model_location(model_num: int, cs_num: int, synonym: bool = True)
             return BM3_CS3_NONSEMANTIC
             
     raise ValueError(f"Invalid combination: model_num={model_num}, cs_num={cs_num}")
- 
 
 
 # Load the tokenizer and model. Uses HF_TOKEN for private models 
