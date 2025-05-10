@@ -10,8 +10,8 @@ BM_SMOL = "HuggingFaceTB/SmolLM-360M-Instruct"
 BM1_CS1_SEMANTIC = "withmartian/sql_interp_bm1_cs1_experiment_1.10"
 BM1_CS2_SEMANTIC = "withmartian/sql_interp_bm1_cs2_experiment_2.10"
 BM1_CS3_SEMANTIC = "withmartian/sql_interp_bm1_cs3_experiment_3.10"
-BM1_CS4_SEMANTIC = "withmartian/sft_sql_interp_TinyStories-2Layers-33M_cs4_dataset_synonyms_experiment_1.1"
-BM1_CS5_SEMANTIC = "withmartian/sft_sql_interp_TinyStories-2Layers-33M_cs4_dataset_synonyms_experiment_1.1"
+BM1_CS4_SEMANTIC = "withmartian/sql_interp_bm1_cs4_dataset_synonyms_experiment_1.1"
+BM1_CS5_SEMANTIC = "withmartian/sql_interp_bm1_cs5_dataset_synonyms_experiment_1.2"
 
 # Model 2 Semantic Variants
 BM2_CS1_SEMANTIC = "withmartian/sql_interp_bm2_cs1_experiment_4.3"
