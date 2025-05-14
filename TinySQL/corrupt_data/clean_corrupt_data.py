@@ -29,6 +29,10 @@ DEFAGGREGATEFUNCTION1 = "DefAggregateFunction1"
 DEFAGGREGATEFUNCTION2 = "DefAggregateFunction2"
 DEFAGGREGATEFIELD1 = "DefAggregateField1"
 DEFAGGREGATEFIELD2 = "DefAggregateField2"
+
+DEFWHEREFIELD1 = "DefWhereField1"
+DEFJOINFIELD1 = "DefJoinField1"
+
 # CorruptFeatureTestGenerator generates clean and corrupt data for testing.
 # That clean and corrupt examples have the same number of tokens under a range of different conditions.   
 @dataclass
@@ -62,7 +66,7 @@ class CorruptibleBatchItem(BatchItem):
             create_statement=self.create_statement,
             select=self.select,
             order_by=self.order_by,
-            order_by_phrase = self.order_by_phrase,
+            order_by_phrase=self.order_by_phrase,
             agg_phrases=self.agg_phrases,
             english_prompt=self.english_prompt,
             sql_statement=self.sql_statement

@@ -78,17 +78,30 @@ class BatchItem:
     agg_phrases: List[str]
     english_prompt: str # aka Instruction
     sql_statement: str # aka Response
+    join_table: str = ""
+    join_fields: List[str] = None
+    join_condition: List[str] = None
+    where: List[str] = None
 
     def print(self):
-        print( "Command Set:", self.command_set )
-        print( "Table name:", self.table_name.name, "with synonym:", self.table_name.synonym )
-        print( "Table fields:", self.table_fields )
-        print( "Create:", self.create_statement )
-        print( "Select:", self.select )
+        print("Command Set:", self.command_set)
+        print("Table name:", self.table_name.name, "with synonym:", self.table_name.synonym)
+        print("Table fields:", self.table_fields)
+        print("Create:", self.create_statement)
+        print("Select:", self.select)
         if self.order_by:
-            print( "Order by:", self.order_by )
-        print( "English:", self.english_prompt )
-        print( "SQL:", self.sql_statement )
+            print("Order by:", self.order_by)
+        print("English:", self.english_prompt)
+        print("SQL:", self.sql_statement)
+
+        if self.join_table:
+            print("Join table:", self.join_table)
+
+        if self.join_conditions:
+            print("Join fields:", self.join_conditions)
+
+        if self.where:
+            print("Where fields:", self.where)
 
     def get_alpaca_prompt(self):
         alpaca_prompt = """### Instruction: {} ### Context: {} ### Response: """

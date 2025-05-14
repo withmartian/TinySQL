@@ -406,9 +406,11 @@ def get_sql_table_name() -> TableName:
     the_table = random.choice(all_tables)
     the_synonym = random.choice(the_table.synonyms)
 
-    answer = TableName
-    answer.name = the_table.name
-    answer.synonym = the_synonym
+    answer = TableName(
+        name=the_table.name,
+        synonym=the_synonym,
+        use_synonym=False
+    )
     return answer
 
 
