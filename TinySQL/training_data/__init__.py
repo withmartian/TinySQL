@@ -40,6 +40,10 @@ from .generate_cs1 import (
 )
 from .generate_cs2 import generate_cs2, evaluate_cs2_prediction, evaluate_cs2_predictions
 from .generate_cs3 import generate_cs3, evaluate_cs3_prediction, evaluate_cs3_predictions
+
+from .generate_cs4 import generate_cs4, evaluate_cs4_prediction, evaluate_cs4_predictions
+from .generate_cs5 import generate_cs5, evaluate_cs5_prediction, evaluate_cs5_predictions
+
 from .generate_csn import generate_csn
 
 from .generate_utils import (generate_inputs_from_prompt, generate_inputs_from_BatchItems, output_inference_text)
