@@ -7,6 +7,8 @@ from datasets import Dataset, DatasetDict
 from TinySQL.training_data.generate_cs1 import generate_cs1, evaluate_cs1_prediction
 from TinySQL.training_data.generate_cs2 import generate_cs2, evaluate_cs2_prediction
 from TinySQL.training_data.generate_cs3 import generate_cs3, evaluate_cs3_prediction
+from TinySQL.training_data.generate_cs4 import generate_cs4, evaluate_cs4_prediction
+from TinySQL.training_data.generate_cs5 import generate_cs5, evaluate_cs5_prediction
 from TinySQL.training_data.fragments.models import TableName, BatchItem, TableField, SelectField, OrderField
 
 def batchitem_to_dict(batch_item):
@@ -104,6 +106,7 @@ def generate_dataset(batch_size, generate_cs_function, evaluate_cs_function, dat
     accuracy = 0
     for i in range(len(train_dataset)):
         sample = train_dataset[i]
+        print(sample)
         item = dict_to_batchitem(sample)
         score = evaluate_cs_function(item, sample['sql_statement'])
         if (not push_to_hf) or score < 1:
@@ -126,3 +129,5 @@ if __name__ == '__main__':
     generate_dataset(batch_size, generate_cs1, evaluate_cs1_prediction, "withmartian/cs1_dataset" + suffix, use_synonyms, True)
     generate_dataset(batch_size, generate_cs2, evaluate_cs2_prediction, "withmartian/cs2_dataset" + suffix, use_synonyms, True)
     generate_dataset(batch_size, generate_cs3, evaluate_cs3_prediction, "withmartian/cs3_dataset" + suffix, use_synonyms, True)
+    generate_dataset(batch_size, generate_cs4, evaluate_cs4_prediction, "withmartian/cs4_dataset" + suffic, use_synonyms, True)
+    generate_dataset(batch_size, generate_cs5, evaluate_cs5_prediction, "withmartian/cs5_dataset" + suffix, use_synonyms, True)
