@@ -489,7 +489,7 @@ class CorruptFeatureTestGenerator:
         after_keyword = parts[1]
 
         after_keyword = after_keyword.replace(orig_word, replacement_word, 1)
-        return keyword.join(before_keyword, after_keyword)
+        return keyword.join([before_keyword, after_keyword])
 
     def _corrupt_def_where_field(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
