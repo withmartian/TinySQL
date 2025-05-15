@@ -14,7 +14,8 @@ class TestCorruptData(unittest.TestCase):
             tokenizer=tokenizer, 
             use_novel_names=use_novel_names, 
             use_synonyms_field=use_synonyms_field,
-            use_synonyms_table=use_synonyms_table)
+            use_synonyms_table=use_synonyms_table
+        )
 
         batch_size = 5
         examples = generator.generate_feature_examples(feature_name, batch_size)      

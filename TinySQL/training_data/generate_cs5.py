@@ -41,9 +41,11 @@ def generate_cs5(batch_size,
         
         include_where = (random.random() < where_clause_probability)
         if include_where:
-            conditions, sql_where_statement = get_sql_where(main_fields)
+            (where_fields, where_literals, conditions, sql_where_statement) = get_sql_where(main_fields)
             english_where_prompt = get_english_where(conditions)
         else:
+            where_fields = []
+            where_literals = []
             conditions = []
             sql_where_statement = ""
             english_where_prompt = ""
@@ -87,6 +89,8 @@ def generate_cs5(batch_size,
             join_fields=join_fields,
             join_condition=join_condition,
             where=conditions,
+            where_fields=where_fields,
+            where_literals=where_literals,
             english_prompt=full_english_prompt,
             sql_statement=full_sql_statement,
             order_by_phrase=order_by_phrase,

@@ -78,6 +78,8 @@ class BatchItem:
     agg_phrases: List[str]
     english_prompt: str # aka Instruction
     sql_statement: str # aka Response
+    where_fields: List[str] = None
+    where_literals: List[str] = None
     join_table: str = ""
     join_fields: List[str] = None
     join_condition: List[str] = None
@@ -101,7 +103,7 @@ class BatchItem:
             print("Join fields:", self.join_conditions)
 
         if self.where:
-            print("Where fields:", self.where)
+            print("Where conditions: ", self.where, "\nWhere fields: ", self.where_fields, "\nWhere literals: ", self.where_literals)
 
     def get_alpaca_prompt(self):
         alpaca_prompt = """### Instruction: {} ### Context: {} ### Response: """
