@@ -389,7 +389,7 @@ class CorruptFeatureTestGenerator:
         token = self.tokenizer(" " + text)["input_ids"][answer_offset] # includes a space
         return token
 
-    def find_target_after_start(input_ids: list[int], start_input_id: int, target_input_id: int) -> int:
+    def find_target_after_start(self, input_ids: list[int], start_input_id: int, target_input_id: int) -> int:
         try:
             start_index = input_ids.index(start_input_id)
         except ValueError:
