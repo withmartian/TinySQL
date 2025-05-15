@@ -253,7 +253,7 @@ class CorruptFeatureTestGenerator:
             order_by_phrase = {'descending' if direction == 'DESC' else 'ascending'}
 
         if self.use_where:
-            where_fields, where_literals, where_conditions, sql_where_statement = get_sql_where(fields, max_conditions=1)
+            where_fields, where_literals, where_conditions, sql_where_statement = get_sql_where(selected_fields, max_conditions=1)
             where_english = (" " + get_english_where(where_conditions)).strip()
 
         if self.use_join:
@@ -320,7 +320,8 @@ class CorruptFeatureTestGenerator:
                 sql_order_by_statement = ""
 
             if self.use_where:
-                where_fields, where_literals, where_conditions, sql_where_statement = get_sql_where(fields,                                                                     max_conditions=1)
+                where_fields, where_literals, where_conditions, sql_where_statement = get_sql_where(
+                    fields, max_conditions=1)
                 where_english = (" " + get_english_where(where_conditions)).strip()
 
             if self.use_join:
