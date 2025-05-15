@@ -255,7 +255,7 @@ class CorruptFeatureTestGenerator:
         if self.use_where:
             where_fields, where_literals, where_conditions, sql_where_statement = get_sql_where(selected_fields, max_conditions=1)
             where_english = " " + get_english_where(where_conditions).strip()
-            where_clause = sql_where_statement
+            where_clause = " " + sql_where_statement
 
         if self.use_join:
             pass
