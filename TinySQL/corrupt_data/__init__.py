@@ -16,5 +16,8 @@ from .clean_corrupt_data import (
     DEFAGGREGATEFUNCTION2,
     DEFAGGREGATEFIELD1,
     DEFAGGREGATEFIELD2,
-    CorruptFeatureTestGenerator,
+    DEFWHEREFIELD1,
+    DEFWHERELITERAL1,
+    DEFJOINTABLE1,
+    CorruptFeatureTestGenerator
 )
