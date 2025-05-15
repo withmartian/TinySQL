@@ -421,11 +421,16 @@ class CorruptFeatureTestGenerator:
                 clean_prompt_tokens = self.tokenizer(clean_prompt_str)["input_ids"]
                 clean_answer_tokens = self.tokenizer(clean_answer_str)["input_ids"]
 
-                corrupt_tokenizer_index = self.tokenize_text(corrupt_token)
                 item.answer_token_index = len(clean_prompt_tokens) + self.find_target_after_start(
                     input_ids=clean_answer_tokens, start_input_id=item.keyword_tokenizer_index,
                     target_input_id=item.clean_tokenizer_index
-                )
+                ) - 1
+
+                full_prompt = clean_prompt_str + clean_answer_str
+                tokens = self.tokenizer(full_prompt)['input_ids']
+
+                if tokens[item.answer_token_index] != item.clean_tokenizer_index:
+                    raise ValueError(f"Token did not match, we expected {item.clean_tokenizer_index} but instead received {tokens[item.answer_token_index]}")
 
     def set_clean_corrupt_tokens(self, item: CorruptibleBatchItem, clean_token: str, corrupt_token: str, answer_token: str, second_occurrence: bool):
         """Set the clean and corrupt tokens for an item"""
