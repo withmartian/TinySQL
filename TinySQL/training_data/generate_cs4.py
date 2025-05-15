@@ -51,8 +51,8 @@ def generate_cs4(batch_size, order_by_clause_probability=0.9, where_clause_proba
             sql_statement=full_sql_statement,
             order_by_phrase=order_by_phrase,
             agg_phrases=agg_phrases,
+            where=conditions
         )
-        setattr(batch_item, "where", conditions)
         batch.append(batch_item)
     return batch
 
@@ -69,4 +69,8 @@ def evaluate_cs4_prediction(item: BatchItem, predicted_sql_statement: str) -> fl
 
 # placeholder -- deprioritized for rebuttal
 def evaluate_cs4_predictions(items, predicted_sql_statements) -> float:
-    return 0
+    total_accuracy = 0.0
+    for i, item in enumerate(items):
+        accuracy = evaluate_cs4_prediction(item, predicted_sql_statements[i])
+        total_accuracy += accuracy
+    return total_accuracy / len(items)

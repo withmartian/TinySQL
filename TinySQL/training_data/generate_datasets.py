@@ -129,5 +129,5 @@ if __name__ == '__main__':
     generate_dataset(batch_size, generate_cs1, evaluate_cs1_prediction, "withmartian/cs1_dataset" + suffix, use_synonyms, True)
     generate_dataset(batch_size, generate_cs2, evaluate_cs2_prediction, "withmartian/cs2_dataset" + suffix, use_synonyms, True)
     generate_dataset(batch_size, generate_cs3, evaluate_cs3_prediction, "withmartian/cs3_dataset" + suffix, use_synonyms, True)
-    generate_dataset(batch_size, generate_cs4, evaluate_cs4_prediction, "withmartian/cs4_dataset" + suffic, use_synonyms, True)
+    generate_dataset(batch_size, generate_cs4, evaluate_cs4_prediction, "withmartian/cs4_dataset" + suffix, use_synonyms, True)
     generate_dataset(batch_size, generate_cs5, evaluate_cs5_prediction, "withmartian/cs5_dataset" + suffix, use_synonyms, True)

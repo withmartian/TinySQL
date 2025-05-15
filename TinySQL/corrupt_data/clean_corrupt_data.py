@@ -1,9 +1,13 @@
 from dataclasses import dataclass
 from typing import List, Optional
 import random
+
+from TinySQL.training_data.fragments.english_where import get_english_where
 from TinySQL.training_data.fragments.models import TableName, BatchItem, TableField, SelectField
-from TinySQL.training_data.sql_create_table import get_sql_create_table_from_selected_fields
+
 from TinySQL.training_data.sql_create_table import get_sql_create_table
+from TinySQL.training_data.sql_create_table import get_sql_create_table_from_selected_fields
+
 from TinySQL.training_data.sql_select_from import get_sql_select_from
 from TinySQL.training_data.sql_order_by import get_sql_order_by
 from TinySQL.training_data.fragments.field_names import get_FieldInfo
@@ -11,6 +15,7 @@ from TinySQL.training_data.generate_cs1 import evaluate_cs1_prediction_score, ge
 from TinySQL.training_data.fragments.english_order_by import get_english_order_by_phrase
 from TinySQL.training_data.fragments.english_aggregates import get_english_sum_phrases, get_english_avg_phrases, get_english_min_phrases, get_english_max_phrases, get_english_count_phrases
 
+from TinySQL.training_data.sql_where import get_sql_where
 
 field_info = get_FieldInfo()
 
@@ -29,6 +34,11 @@ DEFAGGREGATEFUNCTION1 = "DefAggregateFunction1"
 DEFAGGREGATEFUNCTION2 = "DefAggregateFunction2"
 DEFAGGREGATEFIELD1 = "DefAggregateField1"
 DEFAGGREGATEFIELD2 = "DefAggregateField2"
+
+DEFWHEREFIELD1 = "DefWhereField1"
+DEFWHERELITERAL1 = "DefWhereLiteral1"
+DEFJOINTABLE1 = "DefJoinTable1"
+
 # CorruptFeatureTestGenerator generates clean and corrupt data for testing.
 # That clean and corrupt examples have the same number of tokens under a range of different conditions.   
 @dataclass
@@ -41,8 +51,15 @@ class CorruptibleBatchItem(BatchItem):
     prompt_token_index: int = UNKNOWN_VALUE # Token index in (english or create table) prompt of clean/corrupt word
     answer_token_index: int = UNKNOWN_VALUE # Token index in prediction (sql command) answer of clean/corrupt word
     corrupt_english_prompt: Optional[str] = None # Aka Instruction
+
+    corrupt_join_table: Optional[str] = None
+    corrupt_where: Optional[List[str]] = None
+
     corrupt_create_statement: Optional[str] = None # Aka Context
     corrupt_sql_statement: Optional[str] = None # Aka Response or answer
+
+
+
     use_novel_names: bool = False # Use words not seen in training for the corrupt token
 
     def corrupt_data_sanity_check(self):
@@ -62,10 +79,14 @@ class CorruptibleBatchItem(BatchItem):
             create_statement=self.create_statement,
             select=self.select,
             order_by=self.order_by,
-            order_by_phrase = self.order_by_phrase,
+            order_by_phrase=self.order_by_phrase,
             agg_phrases=self.agg_phrases,
             english_prompt=self.english_prompt,
-            sql_statement=self.sql_statement
+            sql_statement=self.sql_statement,
+            join_table=self.join_table,
+            join_fields=self.join_fields,
+            join_condition=self.join_condition,
+            where=self.where
         )
     
     @property
@@ -82,7 +103,11 @@ class CorruptibleBatchItem(BatchItem):
             order_by_phrase=self.order_by_phrase,
             agg_phrases=self.agg_phrases,
             english_prompt=self.corrupt_english_prompt or self.english_prompt,
-            sql_statement=self.corrupt_sql_statement or self.sql_statement
+            sql_statement=self.corrupt_sql_statement or self.sql_statement,
+            join_table=self.corrupt_join_table or self.join_table,
+            join_fields=self.join_fields,
+            join_condition=self.join_condition,
+            where=self.corrupt_where or self.where
         )
     
     def print_clean(self):
@@ -110,14 +135,20 @@ class CorruptibleBatchItem(BatchItem):
 
 class CorruptFeatureTestGenerator:
     def __init__(self, model_num: int = 1, cs_num: int = 1, tokenizer = None, 
-                 use_novel_names: bool = False, use_order_by: bool = False, use_aggregates:bool = False, use_synonyms_field: bool = False, use_synonyms_table: bool = False, 
+                 use_novel_names: bool = False, use_order_by: bool = False, use_aggregates:bool = False,
+                 use_where:bool = False, use_join:bool = False,
+                 use_synonyms_field: bool = False, use_synonyms_table: bool = False,
                  num_fields: int = 2):
         self.model_num = model_num
         self.cs_num = cs_num
         self.tokenizer = tokenizer
         self.use_novel_names = use_novel_names
+
         self.use_order_by = use_order_by
         self.use_aggregates = use_aggregates
+        self.use_where = use_where
+        self.use_join = use_join
+
         self.use_synonyms_field = use_synonyms_field
         self.use_synonyms_table = use_synonyms_table
         self.num_fields = num_fields
@@ -208,6 +239,10 @@ class CorruptFeatureTestGenerator:
         order_by_english = ""
         order_by_fields = []
         order_by_phrase = ""
+        where_english = ""
+        where_clause = ""
+        where_fields = None
+        where_literals = None
         
         if self.use_order_by:
             order_by_field = random.choice(fields)
@@ -217,8 +252,16 @@ class CorruptFeatureTestGenerator:
             order_by_fields = [SelectField(order_by_field, direction, order_by_field)]
             order_by_phrase = {'descending' if direction == 'DESC' else 'ascending'}
 
-        english_prompt = f"show me the {eng_fields} from the {table_name.synonym if self.use_synonyms_table else table_name.name} table{order_by_english}"
-        sql_statement = f"SELECT {crt_fields} FROM {table_name.name}{order_by_clause}"
+        if self.use_where:
+            where_fields, where_literals, where_conditions, sql_where_statement = get_sql_where(selected_fields, max_conditions=1)
+            where_english = " " + get_english_where(where_conditions).strip()
+            where_clause = " " + sql_where_statement
+
+        if self.use_join:
+            pass
+
+        english_prompt = f"show me the {eng_fields} from the {table_name.synonym if self.use_synonyms_table else table_name.name} table{where_english}{order_by_english}"
+        sql_statement = f"SELECT {crt_fields} FROM {table_name.name}{where_clause}{order_by_clause}"
 
         batch_item_to_return = BatchItem(
             command_set=2 if self.use_order_by else 1,
@@ -228,6 +271,9 @@ class CorruptFeatureTestGenerator:
             select=[SelectField(f, "", self.synonym_field_names[f]) for f in fields],
             order_by=order_by_fields,
             order_by_phrase = order_by_phrase,
+            where=where_conditions or None,
+            where_fields=where_fields,
+            where_literals=where_literals,
             agg_phrases=[],
             english_prompt=english_prompt,
             sql_statement=sql_statement
@@ -272,7 +318,15 @@ class CorruptFeatureTestGenerator:
             else:
                 order_by_fields = []
                 english_order_by_prompt = ""
-                sql_order_by_statement = ""  
+                sql_order_by_statement = ""
+
+            if self.use_where:
+                where_fields, where_literals, where_conditions, sql_where_statement = get_sql_where(
+                    fields, max_conditions=1)
+                where_english = (" " + get_english_where(where_conditions)).strip()
+
+            if self.use_join:
+                pass
 
             batch_item_to_return = BatchItem(
                 command_set=2,
@@ -282,13 +336,15 @@ class CorruptFeatureTestGenerator:
                 select=selected_fields,  # Use SelectFields here
                 order_by=order_by_fields,
                 order_by_phrase = order_by_phrase,
+                where=where_conditions or None,
+                where_fields=where_fields,
+                where_literals=where_literals,
                 agg_phrases = agg_phrases,
                 english_prompt=english_select_from_prompt + " " + english_order_by_prompt,
                 sql_statement=sql_select_statement + " " + sql_order_by_statement,
             )
-
-        
         return batch_item_to_return
+
     def get_generators(self):
         """Return all the generators"""
         generators = {
@@ -305,7 +361,10 @@ class CorruptFeatureTestGenerator:
             DEFAGGREGATEFUNCTION1: self._corrupt_def_aggregate_function1,
             DEFAGGREGATEFUNCTION2: self._corrupt_def_aggregate_function2,
             DEFAGGREGATEFIELD1: self._corrupt_def_aggregate_field1,
-            DEFAGGREGATEFIELD2: self._corrupt_def_aggregate_field2
+            DEFAGGREGATEFIELD2: self._corrupt_def_aggregate_field2,
+            DEFWHEREFIELD1: self._corrupt_def_where_field,
+            DEFWHERELITERAL1: self._corrupt_def_where_literal,
+            DEFJOINTABLE1: self._corrupt_def_join_table
         }
         return generators
 
@@ -330,12 +389,54 @@ class CorruptFeatureTestGenerator:
         token = self.tokenizer(" " + text)["input_ids"][answer_offset] # includes a space
         return token
 
+    def find_target_after_start(self, input_ids: list[int], start_input_id: int, target_input_id: int) -> int:
+        try:
+            start_index = input_ids.index(start_input_id)
+        except ValueError:
+            raise ValueError(f"start_input_id {start_input_id} not found in input_ids")
+
+        for i in range(start_index + 1, len(input_ids)):
+            if input_ids[i] == target_input_id:
+                return i
+
+        raise ValueError(f"target_input_id {target_input_id} not found after start_input_id {start_input_id}")
+
+    def set_clean_corrupt_tokens_for_keyword(self, item: CorruptibleBatchItem, keyword: str, clean_token: str, corrupt_token: str):
+        """Set the clean and corrupt tokens in answer right after where or join"""
+        item.clean_token_str = clean_token
+        item.corrupt_token_str = corrupt_token
+
+        if self.tokenizer is not None:
+            item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
+            item.corrupt_tokenizer_index = self.tokenize_text(item.corrupt_token_str)
+            item.keyword_tokenizer_index = self.tokenize_text(keyword)
+
+            # Check the tokens can be tokenized by the tokenizer
+            if item.clean_tokenizer_index >= self.tokenizer.vocab_size or item.corrupt_tokenizer_index >= self.tokenizer.vocab_size:
+                item.answer_token_index = UNKNOWN_VALUE
+            else:
+                clean_prompt_str = item.clean_BatchItem.get_alpaca_prompt()
+                clean_answer_str = item.clean_BatchItem.sql_statement
+
+                clean_prompt_tokens = self.tokenizer(clean_prompt_str)["input_ids"]
+                clean_answer_tokens = self.tokenizer(clean_answer_str)["input_ids"]
+
+                item.answer_token_index = len(clean_prompt_tokens) + self.find_target_after_start(
+                    input_ids=clean_answer_tokens, start_input_id=item.keyword_tokenizer_index,
+                    target_input_id=item.clean_tokenizer_index
+                ) - 1
+
+                full_prompt = clean_prompt_str + clean_answer_str
+                tokens = self.tokenizer(full_prompt)['input_ids']
+
+                if tokens[item.answer_token_index] != item.clean_tokenizer_index:
+                    raise ValueError(f"Token did not match, we expected {item.clean_tokenizer_index} but instead received {tokens[item.answer_token_index]}")
+
     def set_clean_corrupt_tokens(self, item: CorruptibleBatchItem, clean_token: str, corrupt_token: str, answer_token: str, second_occurrence: bool):
         """Set the clean and corrupt tokens for an item"""
         item.clean_token_str = clean_token
         item.corrupt_token_str = corrupt_token
         item.use_novel_names = self.use_novel_names
-        
 
         if self.tokenizer is not None:      
             item.clean_tokenizer_index = self.tokenize_text(item.clean_token_str)
@@ -361,7 +462,7 @@ class CorruptFeatureTestGenerator:
                         # May have "Instruction: pull a and B from c Context: Create table c { a INT, b INT }" so comma is first occurrence.
                         item.prompt_token_index = occurrences[0]
                     else:
-                        print( len(occurrences), item.clean_tokenizer_index, item.clean_token_str, item.get_alpaca_prompt(), clean_prompt_tokens)
+                        print(len(occurrences), item.clean_tokenizer_index, item.clean_token_str, item.get_alpaca_prompt(), clean_prompt_tokens)
                         raise ValueError("Clean token does not appear twice in the prompt tokens.")
 
                 else:
@@ -370,7 +471,6 @@ class CorruptFeatureTestGenerator:
                 # If we are using a semantic model, and testing feature EngTableName or EngFieldName, then the clean token will not appear in the answer 
                 answer_tokenizer_index = self.tokenize_text(answer_token)
                 item.answer_token_index = len(clean_prompt_tokens) + clean_answer_tokens.index(answer_tokenizer_index) - 1
-
                 
     def _corrupt_eng_table_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
@@ -382,7 +482,50 @@ class CorruptFeatureTestGenerator:
         # For semantic models, the clean token will not appear in the answer
         self.set_clean_corrupt_tokens(item, table_str, wrong_table, base.table_name.name, False)
         return item
-     
+
+    def replace_first_occurrence_after_keyword(
+            self, query: str, keyword: str, orig_word: str, replacement_word: str) -> str:
+        # Make case-insensitive search for query
+        parts = query.split(keyword, 1)
+        if len(parts) < 2:
+            return query  # No keyword
+
+        before_keyword= parts[0]
+        after_keyword = parts[1]
+
+        after_keyword = after_keyword.replace(orig_word, replacement_word, 1)
+        return keyword.join([before_keyword, after_keyword])
+
+    def _corrupt_def_where_field(self) -> CorruptibleBatchItem:
+        base = self._make_base_item()
+        if self.use_synonyms_field:
+            raise ValueError("We do not support use_synonyms_field here.")
+
+        base_fields = base.table_fields
+        original_where_field = base.where_fields[0].name_str
+        keyword = "WHERE"
+
+        corrupted_field = random.choice([f for f in base_fields if f.name_str != original_where_field]).name_str
+
+        corrupted_sql = self.replace_first_occurrence_after_keyword(
+            query=base.sql_statement, keyword=keyword, orig_word=original_where_field, replacement_word=corrupted_field)
+
+        item = CorruptibleBatchItem(**vars(base), feature_name=DEFWHEREFIELD1, corrupt_sql_statement=corrupted_sql)
+
+        self.set_clean_corrupt_tokens_for_keyword(
+            item=item, keyword=keyword, clean_token=original_where_field, corrupt_token=corrupted_field)
+
+        return item
+
+    def _corrupt_def_where_literal(self) -> CorruptibleBatchItem:
+        raise ValueError("Corrupt where not yet implemented")
+        pass
+
+    def _corrupt_def_join_table(self) -> CorruptibleBatchItem:
+        raise ValueError("Corrupt join table not yet implemented")
+        pass
+
+
     def _corrupt_eng_field_name(self) -> CorruptibleBatchItem:
         base = self._make_base_item()
         field_str = base.table_fields[0].name_str

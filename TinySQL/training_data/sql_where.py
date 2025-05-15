@@ -10,7 +10,7 @@ from .fragments.where_utilities import (
 def get_sql_where(table_fields, max_conditions=3):
     num_possible = min(max_conditions, len(table_fields))
     num_conditions = random.randint(1, num_possible)
-    selected_fields = random.sample(table_fields, num_conditions)
+    where_fields = random.sample(table_fields, num_conditions)
 
     condition_operators = {
         "INTEGER": ["=", ">", "<", ">=", "<="],
@@ -34,7 +34,8 @@ def get_sql_where(table_fields, max_conditions=3):
 
     conditions = []
     sql_conditions = []
-    for field in selected_fields:
+    where_literals = []
+    for field in where_fields:
         field_type = field.type.upper()
         if "(" in field_type:
             base_type = field_type.split("(")[0]
@@ -61,8 +62,11 @@ def get_sql_where(table_fields, max_conditions=3):
         else:
             value = random_numeric_value()
 
+        where_literals.append(value)
+
         condition = f"{field.name} {operator} {value}"
         conditions.append(condition)
         sql_conditions.append(condition)
+
     sql_where_statement = "WHERE " + " AND ".join(sql_conditions)
-    return conditions, sql_where_statement
+    return where_fields, where_literals, conditions, sql_where_statement

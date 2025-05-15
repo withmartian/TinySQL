@@ -41,9 +41,11 @@ def generate_cs5(batch_size,
         
         include_where = (random.random() < where_clause_probability)
         if include_where:
-            conditions, sql_where_statement = get_sql_where(main_fields)
+            (where_fields, where_literals, conditions, sql_where_statement) = get_sql_where(main_fields)
             english_where_prompt = get_english_where(conditions)
         else:
+            where_fields = []
+            where_literals = []
             conditions = []
             sql_where_statement = ""
             english_where_prompt = ""
@@ -83,31 +85,34 @@ def generate_cs5(batch_size,
             create_statement=main_create_statement,
             select=selected_fields,
             order_by=order_by_fields,
+            join_table=join_table,
+            join_fields=join_fields,
+            join_condition=join_condition,
+            where=conditions,
+            where_fields=where_fields,
+            where_literals=where_literals,
             english_prompt=full_english_prompt,
             sql_statement=full_sql_statement,
             order_by_phrase=order_by_phrase,
             agg_phrases=agg_phrases
         )
-        
-        setattr(batch_item, "join_table", join_table)
-        setattr(batch_item, "join_condition", join_condition)
-        setattr(batch_item, "where", conditions)
-        
+
         batch.append(batch_item)
     
     return batch
 
 
-# placeholder -- deprioritized for rebuttal
 def evaluate_cs5_prediction_score(item: BatchItem, predicted_sql_statement: str):
     return (0, 0)
 
 
-#placeholder -- deprioritized for rebuttal
 def evaluate_cs5_prediction(item: BatchItem, predicted_sql_statement: str) -> float:
     return 0
 
 
-#placeholder -- deprioritized for rebuttal
 def evaluate_cs5_predictions(items, predicted_sql_statements) -> float:
-    return 0
+    total_accuracy = 0.0
+    for i, item in enumerate(items):
+        accuracy = evaluate_cs5_prediction(item, predicted_sql_statements[i])
+        total_accuracy += accuracy
+    return total_accuracy / len(items)
