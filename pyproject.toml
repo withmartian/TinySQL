@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "TinySQL"
-version = "1.3"
+version = "1.4"
 description = "Tools for use with the TinySQL project"
 authors = [{name = "Philip Quirke et al", email = "philipquirkenz@gmail.com"}]
 keywords = ["SQL", "machine learning", "text to SQL", "interpretable AI"]
