@@ -22,7 +22,7 @@ def generate_cs4(batch_size, order_by_clause_probability=0.9, where_clause_proba
 
         include_where = random.random() < where_clause_probability
         if include_where:
-            conditions, sql_where_statement = get_sql_where(table_fields)
+            _, _, conditions, sql_where_statement = get_sql_where(table_fields)
             english_where_prompt = get_english_where(conditions)
         else:
             conditions = []
